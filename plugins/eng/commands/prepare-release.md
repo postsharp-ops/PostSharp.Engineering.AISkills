@@ -65,6 +65,10 @@ Gather all information first:
        gh release view --repo metalama/Metalama.Compiler release/<CURRENT_COMPILER>
        ```
      - Find previous compiler release tag for the "Based on" link
+     - Check if a Metalama.Compiler milestone exists for this compiler version:
+       ```bash
+       gh api repos/metalama/Metalama.Compiler/milestones --jq '.[] | select(.title == "<CURRENT_COMPILER>") | {number, title, state, open_issues, closed_issues}'
+       ```
 
 7. **Check Metalama.Premium changes**:
    - Fetch commit log between matching Metalama.Premium release tags:
@@ -109,7 +113,7 @@ Present to user for approval:
 
    When compiler version changed, add after the "based on" paragraph:
    ```
-   This release uses [Metalama.Compiler <COMPILER_VERSION>](https://github.com/metalama/Metalama.Compiler/releases/tag/release/<COMPILER_VERSION>).
+   This release updates Metalama.Compiler to [<COMPILER_VERSION>](https://github.com/metalama/Metalama.Compiler/releases/tag/release/<COMPILER_VERSION>).
    ```
 
    Then:
@@ -140,6 +144,9 @@ Present to user for approval:
    Based on [<PREV_COMPILER>](https://github.com/metalama/Metalama.Compiler/releases/tag/release/<PREV_COMPILER>).
 
    - <bullet points from commit messages>
+
+   ### Resources
+   - [Milestone](https://github.com/metalama/Metalama.Compiler/milestone/<COMPILER_MILESTONE_NUMBER>?closed=1)
    ```
 
 **STOP and wait for user approval.**
@@ -164,18 +171,23 @@ After approval:
    gh api repos/metalama/Metalama/milestones/<NUMBER> -X PATCH -f state=closed
    ```
 
-4. **Close Metalama.Premium milestone** (if one exists for this version):
+4. **Close Metalama.Compiler milestone** (if one exists for this compiler version):
+   ```bash
+   gh api repos/metalama/Metalama.Compiler/milestones/<COMPILER_MILESTONE_NUMBER> -X PATCH -f state=closed
+   ```
+
+5. **Close Metalama.Premium milestone** (if one exists for this version):
    ```bash
    gh api repos/metalama/Metalama.Premium/milestones/<NUMBER> -X PATCH -f state=closed
    ```
 
-5. **Update project status to "Done"** for each issue:
+6. **Update project status to "Done"** for each issue:
    ```bash
    # Done option: 98236657
    gh api graphql -f query='mutation { updateProjectV2ItemFieldValue(input: { projectId: "PVT_kwDOC7gkgc4A030b" itemId: "<ITEM_ID>" fieldId: "PVTSSF_lADOC7gkgc4A030bzgqb1vQ" value: { singleSelectOptionId: "98236657" } }) { projectV2Item { id } } }'
    ```
 
-6. **Add release comment** to each issue:
+7. **Add release comment** to each issue:
    ```bash
    gh issue comment <NUMBER> --repo metalama/Metalama --body "Released in [<VERSION>](https://github.com/metalama/Metalama/releases/tag/release/<VERSION>).
 
