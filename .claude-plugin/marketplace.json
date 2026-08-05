@@ -13,7 +13,7 @@
       "name": "eng",
       "source": "./plugins/eng",
       "description": "PostSharp engineering workflows: git conventions, PRs, releases, TeamCity CI/CD, build diagnostics",
-      "version": "1.9.0",
+      "version": "1.10.0",
       "author": {
         "name": "PostSharp Technologies",
         "email": "hello@postsharp.net"

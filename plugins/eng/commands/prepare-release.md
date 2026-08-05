@@ -9,7 +9,20 @@ Prepare a GitHub release for a milestone. Requires user approval before executio
 
 ## Products and Repositories
 
-Four products are versioned and released independently, each with its own release notes: **Metalama**, **Metalama.Compiler**, **PostSharp**, **Metalama.Vsx**. This command prepares the **Metalama** release, plus the Metalama.Compiler release when the compiler version changed.
+Four products are versioned and released independently, each with its own release notes. Tag and title conventions differ per product — check this table before creating any release:
+
+| Product | Release + issues repo | Tag | Release title |
+|---|---|---|---|
+| Metalama | `metalama/Metalama` | `release/2026.1.21` | `Metalama 2026.1.21` |
+| Metalama.Compiler | `metalama/Metalama.Compiler` | `release/2026.1.13` | `Metalama.Compiler 2026.1.13` |
+| PostSharp | `postsharp/PostSharp.Public` | `v2026.0.15` | `PostSharp 2026.0.15` |
+| Metalama.Vsx | `metalama/Metalama.Vsx.Public` | `release/2026.1.5` | `PostSharp and Metalama VSX 2026.1.5` |
+
+**The title is always `<product prefix> <VERSION>`, regardless of what earlier releases used.** Several published releases predate this rule — Metalama.Compiler titled `2026.1.13`, PostSharp titled `v2026.0.15`. Do not copy the previous release's title. The version in the title carries no `v` prefix and no `release/` prefix even where the tag does.
+
+PostSharp and Metalama.Vsx are built from private repos (`postsharp/PostSharp`, `metalama/Metalama.Vsx`); the `.Public` repo is where their issues, milestones and releases live. Work in the public repo for both.
+
+The default target of this command is the **Metalama** release, described in Phases 1–3, plus the Metalama.Compiler release when the compiler version changed. For the other two, follow those phases with the deltas in "PostSharp Release" and "Metalama.Vsx Release" below.
 
 Metalama is not one repository. It is several repositories sharing one version, released together, covered by one set of release notes in `metalama/Metalama`. Inspect the issues and milestones of all three:
 
@@ -203,7 +216,7 @@ After approval:
 
 2. **Create Metalama.Compiler release** (if compiler version changed and release doesn't exist):
    ```bash
-   gh release create release/<COMPILER_VERSION> --repo metalama/Metalama.Compiler --target <COMPILER_COMMIT> --title "<COMPILER_VERSION>" --notes "<NOTES>" [--prerelease]
+   gh release create release/<COMPILER_VERSION> --repo metalama/Metalama.Compiler --target <COMPILER_COMMIT> --title "Metalama.Compiler <COMPILER_VERSION>" --notes "<NOTES>" [--prerelease]
    ```
    Add `--prerelease` if version contains `-preview` or `-rc`.
 
@@ -244,6 +257,56 @@ After approval:
 
    — Claude"
    ```
+
+## PostSharp Release
+
+Prepared in `postsharp/PostSharp.Public`, which holds the issues, the milestones and the releases for the private `postsharp/PostSharp`.
+
+Deltas from the Metalama workflow:
+
+- **Pass `--repo postsharp/PostSharp.Public` to every `gh` command**, including `gh release create` — the Phase 3 commands omit `--repo` and would otherwise act on the current directory's repo.
+- **Tag is `v<VERSION>`**, not `release/<VERSION>`. The title is `PostSharp <VERSION>` — not the tag, and without the `v`, even though every published PostSharp release so far is titled after its tag.
+- **Two version lines are live at once** (`2024.0.x` and `2026.0.x`), and fixes are forward-ported from the older to the newer. When a release forward-ports, cite both bases and link the upstream milestone as such.
+- Single base:
+  ```
+  PostSharp <VERSION> is based on [v<PREV>](https://github.com/postsharp/PostSharp.Public/releases/tag/v<PREV>), plus the following changes.
+  ```
+- Forward-port, with a paragraph naming what was carried over:
+  ```
+  PostSharp <VERSION> is based on [v<PREV>](…/v<PREV>) and [v<UPSTREAM>](…/v<UPSTREAM>).
+
+  This release forward-ports the upstream [v<UPSTREAM>](…/v<UPSTREAM>) fixes to the <LINE> line: <summary>.
+
+  ### Resources
+  - [Milestone <UPSTREAM>](https://github.com/postsharp/PostSharp.Public/milestone/<N>?closed=1) (upstream)
+  ```
+- Categories, item wording, and the `### Resources` milestone link are as for Metalama.
+
+## Metalama.Vsx Release
+
+Prepared in `metalama/Metalama.Vsx.Public`, which holds the issues, the milestones and the releases for the private `metalama/Metalama.Vsx`. One VSIX ships the Visual Studio tooling for **both** PostSharp and Metalama, which is why the title names both.
+
+Deltas from the Metalama workflow:
+
+- **Pass `--repo metalama/Metalama.Vsx.Public` to every `gh` command**, including `gh release create`.
+- Tag is `release/<VERSION>`; the title is `PostSharp and Metalama VSX <VERSION>`.
+- Header sentence:
+  ```
+  PostSharp and Metalama VSX <VERSION> is based on [<PREV>](https://github.com/metalama/Metalama.Vsx.Public/releases/tag/release/<PREV>), plus the following changes.
+  ```
+- **Add a lead paragraph** stating what the release is about when it has a theme (a Metalama version adoption, a security pass), before the categories.
+- **Custom category headings are allowed** where they group the work better than Breaking/New/Enhancements/Fixes — for example `### Privacy & telemetry`, `### Security hardening`, `### Other changes`. Item wording rules are unchanged.
+- **Add an upstream-versions section** listing the versions this VSIX consumes, one line per product and per live Metalama version line:
+  ```
+  ## Upstream versions
+  - PostSharp: [<VERSION>](https://github.com/postsharp/PostSharp.Public/releases/tag/v<VERSION>)
+  - Metalama <LINE>: [<VERSION>](https://github.com/metalama/Metalama/releases/tag/release/<VERSION>)
+  ```
+- **Resources include the VSIX download**, alongside the milestone:
+  ```
+  - [Download PostSharpMetalama.<VERSION>.vsix](https://www.postsharp.net/downloads/vsx/vsx-<MAJOR.MINOR>/v<VERSION>/PostSharpMetalama.<VERSION>.vsix)
+  ```
+- Prereleases are tagged `release/<VERSION>-rc` and `release/<VERSION>-preview`; pass `--prerelease`.
 
 ## Writing Release Note Items
 
@@ -298,7 +361,12 @@ When the shipped fix does not match the title, propose a new title alongside the
 
 ### Exclusions
 
-Issues with no user-visible effect stay out of the notes whatever their milestone: those labelled `test-only`, flaky-test fixes, and pure build or engineering changes. List them in Phase 2 as excluded, so the omission is visible.
+Keep out of the notes, whatever the milestone says:
+
+- **`unpublished`** — the defect only ever affected a build or commit that was never published, so no user can have hit it. Reporting it would describe a bug that never reached anyone.
+- **`test-only`**, flaky-test fixes, and pure build or engineering changes — no user-visible effect.
+
+List the exclusions in Phase 2, so the omission is visible.
 
 ## Release Notes Guidelines
 
