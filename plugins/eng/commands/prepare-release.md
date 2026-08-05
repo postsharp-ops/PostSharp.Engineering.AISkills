@@ -7,6 +7,20 @@ argument-hint: "<milestone URL or number>"
 
 Prepare a GitHub release for a milestone. Requires user approval before execution.
 
+## Products and Repositories
+
+Four products are versioned and released independently, each with its own release notes: **Metalama**, **Metalama.Compiler**, **PostSharp**, **Metalama.Vsx**. This command prepares the **Metalama** release, plus the Metalama.Compiler release when the compiler version changed.
+
+Metalama is not one repository. It is several repositories sharing one version, released together, covered by one set of release notes in `metalama/Metalama`. Inspect the issues and milestones of all three:
+
+| Repository | Visibility | Notes |
+|---|---|---|
+| `metalama/Metalama` | public | Own issues; the milestone the release is named for |
+| `metalama/Metalama.Premium` | private | Usually has no issues — `metalama/Metalama` is its issue tracker, so its commit log is the reliable signal |
+| `metalama/Metalama.Community` | public | Own milestone per version (e.g. `2026.1.22`), with issues |
+
+Metalama.Compiler is a separate product, not a Metalama repo: it gets its own release and notes, which the Metalama notes reference when the version changed.
+
 ## Arguments
 
 $ARGUMENTS - Milestone URL or number (e.g., `https://github.com/metalama/Metalama/milestone/31` or `31`)
@@ -76,23 +90,32 @@ Gather all information first:
      gh api repos/metalama/Metalama.Premium/compare/release/<PREV_VERSION>...release/<VERSION> --jq '.commits[] | {sha: .sha[:8], message: .commit.message}'
      ```
    - Summarize meaningful commits (same exclusion rules: `<<VERSION_BUMP>>`, `<<AUTO_UPDATED_VERSIONS>>`, merge commits, `Update eng` commits)
-   - Check if a matching milestone exists and list its issues:
+   - Check whether a matching milestone exists and list its issues:
      ```bash
      gh issue list --repo metalama/Metalama.Premium --milestone "<VERSION>" --state all --json number,title,state,labels
      ```
-   - Issues from Metalama.Premium will be included in the Metalama release notes
+   - Expect no issues: Premium work is normally tracked in `metalama/Metalama`. An empty milestone is not evidence that Premium is unchanged — use the commit log for that
+   - Any Premium issues that do exist go in the Metalama release notes, linked to the Premium repo
 
-8. **Review what each issue actually shipped**. An issue title is written when the defect is *reported*, so it usually describes the symptom or the first suspected cause. The real defect, and the user-visible effect of the fix, are often known only once the work is done — which means the closing PR, not the issue title, is the accurate source for a release note.
-
-   For every issue that will appear in the notes, fetch the issue body and its closing PR:
+8. **Check Metalama.Community changes**. Community shares Metalama's version and has its own milestone per version:
    ```bash
-   gh issue view <NUMBER> --repo metalama/Metalama --json title,body,labels,closedByPullRequestsReferences
-   gh pr view <PR_NUMBER> --repo metalama/Metalama --json title,body
+   gh api repos/metalama/Metalama.Community/milestones --jq '.[] | {number, title, state, open_issues, closed_issues}'
+   gh issue list --repo metalama/Metalama.Community --milestone "<VERSION>" --state all --json number,title,state,labels
+   ```
+   - The Community milestone may carry a different patch number; match on the version being released, and ask if ambiguous
+   - Its issues go in the Metalama release notes under the normal categories, linked to the Community repo: `[Metalama.Community#98](https://github.com/metalama/Metalama.Community/issues/98)`
+
+9. **Review what each issue actually shipped**. A title is written when the defect is reported, so it describes the symptom or the first suspected cause; the real defect is often known only once the work is done. Use the closing PR, not the title, as the source for the note.
+
+   For every issue that will appear in the notes — from any of the three repos — fetch the issue body and its closing PR. **`--repo` must be the issue's own repo**, since the same number exists in all of them:
+   ```bash
+   gh issue view <NUMBER> --repo <ISSUE_REPO> --json title,body,labels,closedByPullRequestsReferences
+   gh pr view <PR_NUMBER> --repo <PR_REPO> --json title,body
    ```
 
-   From the PR description, establish: what the user observed, under what conditions, and what changed. Write the release note item from that — not by paraphrasing the issue title.
+   From the PR description, establish what the user observed, under what conditions, and what changed. Write the item from that, not by paraphrasing the title.
 
-   Flag for renaming any issue whose title no longer matches what shipped, or that is unintelligible to a user (see "Writing Release Note Items" below). Collect these as rename proposals for Phase 2; never rename silently.
+   Flag for renaming any issue whose title no longer matches what shipped, or is unintelligible to a user (see "Writing Release Note Items"). Collect these for Phase 2; never rename silently.
 
 ## Phase 2: Present Plan
 
@@ -108,12 +131,15 @@ Present to user for approval:
    - If changed and release already exists: note that it will be referenced in Metalama notes
    - If unchanged: note that compiler reference will not be included
 
-6. **Premium status**: Whether there are meaningful commits or issues
-   - List any issues/commits to be included in Metalama release notes
+6. **Premium and Community status**: report all three repos, including those with nothing to report, so an empty result is distinguishable from an unchecked repo
+   - Premium: meaningful commits, and any issues
+   - Community: milestone and its issues
 
-7. **Proposed issue renames**: every issue whose title should change, as a table of issue number, current title, proposed title, and the reason (stale after implementation, or not intelligible to a user). Renaming is part of the release, not an afterthought: the title is what the reader sees when following the link from the notes, so a note that reads well next to a title that contradicts it is still a failure. **Wait for approval on each rename** — never rename an issue that the user has not approved.
+7. **Excluded issues**: issues in the milestones that will not appear in the notes, with the reason (see "Exclusions")
 
-8. **Proposed release notes**:
+8. **Proposed issue renames**: a table of issue number, current title, proposed title, and reason (stale after implementation, or unintelligible to a user). The title is what a reader sees on following the link, so it has to match the note. **Wait for approval on each rename.**
+
+9. **Proposed release notes**:
 
    Single base:
    ```
@@ -151,7 +177,7 @@ Present to user for approval:
 
    Metalama.Premium issues are included in the normal categories above with links to the Premium repo: `[#XX](https://github.com/metalama/Metalama.Premium/issues/XX)`. Premium commits that reference Metalama issues should use Metalama issue links instead.
 
-9. **Proposed Metalama.Compiler release notes** (when creating):
+10. **Proposed Metalama.Compiler release notes** (when creating):
    ```
    **Release date:** YYYY-MM-DD
 
@@ -171,9 +197,9 @@ After approval:
 
 1. **Apply approved issue renames** (before creating the release, so the links in the notes resolve to the corrected titles):
    ```bash
-   gh issue edit <NUMBER> --repo metalama/Metalama --title "<APPROVED TITLE>"
+   gh issue edit <NUMBER> --repo <ISSUE_REPO> --title "<APPROVED TITLE>"
    ```
-   Apply only the renames the user approved, with the exact wording approved.
+   Apply only the renames the user approved, with the exact wording approved. Pass the issue's own repo — a number from Community or Premium addresses a different issue in `metalama/Metalama`.
 
 2. **Create Metalama.Compiler release** (if compiler version changed and release doesn't exist):
    ```bash
@@ -201,22 +227,27 @@ After approval:
    gh api repos/metalama/Metalama.Premium/milestones/<NUMBER> -X PATCH -f state=closed
    ```
 
-7. **Update project status to "Done"** for each issue:
+7. **Close Metalama.Community milestone** (if one exists for this version):
+   ```bash
+   gh api repos/metalama/Metalama.Community/milestones/<NUMBER> -X PATCH -f state=closed
+   ```
+
+8. **Update project status to "Done"** for each issue:
    ```bash
    # Done option: 98236657
    gh api graphql -f query='mutation { updateProjectV2ItemFieldValue(input: { projectId: "PVT_kwDOC7gkgc4A030b" itemId: "<ITEM_ID>" fieldId: "PVTSSF_lADOC7gkgc4A030bzgqb1vQ" value: { singleSelectOptionId: "98236657" } }) { projectV2Item { id } } }'
    ```
 
-8. **Add release comment** to each issue:
+9. **Add release comment** to each issue:
    ```bash
-   gh issue comment <NUMBER> --repo metalama/Metalama --body "Released in [<VERSION>](https://github.com/metalama/Metalama/releases/tag/release/<VERSION>).
+   gh issue comment <NUMBER> --repo <ISSUE_REPO> --body "Released in [<VERSION>](https://github.com/metalama/Metalama/releases/tag/release/<VERSION>).
 
    — Claude"
    ```
 
 ## Writing Release Note Items
 
-Release notes are read by users, not by the team. Every item must let a reader decide **whether the change affects them**, without knowing our internal types, methods, or file layout. An item that only makes sense to whoever fixed it has failed, however accurate it is.
+Release notes are read by users, not by the team. Every item must let a reader decide whether the change affects them, without knowing our internal types, methods or file layout.
 
 ### Opening verb
 
@@ -229,11 +260,11 @@ Start each item with a past-tense verb naming what changed for the user:
 | New | **Added …** | Added a public `IDurableRef` interface family. |
 | Breaking Changes | **Removed …**, **Renamed …**, **Changed …** | Renamed the test synchronization hooks into the `Metalama.Testing.Hooks` package. |
 
-Stating the new behaviour in the present tense is also acceptable where it reads better — "Crash reports now capture …", "The compile-time compilation no longer force-defines `NETSTANDARD_2_0`." What is never acceptable is a bare symptom or a bare cause: "`KeyNotFoundException` in `SplitResultsByTree`" tells a user nothing.
+Present tense is fine where it reads better — "Crash reports now capture …", "The compile-time compilation no longer force-defines `NETSTANDARD_2_0`". A bare symptom or cause is not: "`KeyNotFoundException` in `SplitResultsByTree`" tells a user nothing.
 
 ### The reader test
 
-Before accepting an item, check it against a user who does not work on Metalama:
+Check each item against a user who does not work on Metalama:
 
 1. **Can they tell whether it affects them?** Name the user-visible situation — design time, a specific target framework, a configuration file, a particular API.
 2. **Is every term one they can encounter?** Public API names, MSBuild properties, configuration keys and diagnostic IDs are fine. Internal class and method names are not.
@@ -258,16 +289,16 @@ Good items already published, for reference in tone:
 
 ### Renaming issues
 
-When the shipped fix does not match the title — the usual case when the reported symptom turned out to have a different cause — propose a new title alongside the release note item. Rules:
+When the shipped fix does not match the title, propose a new title alongside the note.
 
-- Rewrite the title to describe **the defect that was actually fixed**, in the user's terms, not the symptom first reported.
-- Keep the title a statement of the problem (the issue records a defect); the release note states the resolution. Title: "Design-time crash in projects with linked files." Note: "Fixed a design-time crash affecting projects with linked or generated files."
-- Do not rename an issue merely because its wording is awkward; rename when it is **wrong**, **stale**, or **unintelligible to a user**.
+- Describe the defect that was actually fixed, in the user's terms, not the symptom first reported.
+- Keep the title a statement of the problem; the note states the resolution. Title: "Design-time crash in projects with linked files." Note: "Fixed a design-time crash affecting projects with linked or generated files."
+- Rename when a title is wrong, stale or unintelligible to a user — not merely awkward.
 - Never rename without approval, and never edit the issue body.
 
 ### Exclusions
 
-Issues with no user-visible effect do not belong in the notes at all, whatever their milestone: those labelled `test-only`, flaky-test fixes, and pure build or engineering changes. Report them in Phase 2 as deliberately excluded so the omission is a decision rather than an oversight.
+Issues with no user-visible effect stay out of the notes whatever their milestone: those labelled `test-only`, flaky-test fixes, and pure build or engineering changes. List them in Phase 2 as excluded, so the omission is visible.
 
 ## Release Notes Guidelines
 
@@ -277,5 +308,6 @@ Issues with no user-visible effect do not belong in the notes at all, whatever t
 - **Sign comments**: `— Claude`
 - **Metalama.Compiler release notes**: Built from commit history, excluding `<<VERSION_BUMP>>`, `<<AUTO_UPDATED_VERSIONS>>`, merge commits, and `Update eng` commits
 - **Compiler reference in Metalama notes**: Only include when compiler version changed between releases
-- **Metalama.Premium issues**: Include in Metalama release notes under normal categories. Use Metalama.Premium issue links for Premium-only issues; use Metalama issue links when commits reference Metalama issues
+- **Metalama.Premium issues**: Include in Metalama release notes under normal categories. Use Metalama.Premium issue links for Premium-only issues; use Metalama issue links when commits reference Metalama issues (the usual case, since Metalama is Premium's issue tracker)
 - **Metalama.Premium commits**: Meaningful commits (not eng updates, version bumps, or merges) that don't reference any issue should be mentioned as bullet points in the Metalama release notes
+- **Metalama.Community issues**: Include under the normal categories, linked to the Community repo — `[Metalama.Community#98](https://github.com/metalama/Metalama.Community/issues/98)`

@@ -1,6 +1,6 @@
 {
   "name": "eng",
-  "version": "1.8.0",
+  "version": "1.9.0",
   "description": "PostSharp engineering workflows: git conventions, PRs, releases, TeamCity CI/CD, build diagnostics, development utilities",
   "author": {
     "name": "PostSharp Technologies",
