@@ -1,13 +1,13 @@
 {
   "name": "metalama-dev",
-  "version": "1.2.0",
+  "version": "1.3.0",
   "description": "Metalama framework development: aspect testing, test directives, code model, diagnostics",
   "author": {
     "name": "PostSharp Technologies",
     "email": "hello@postsharp.net"
   },
   "homepage": "https://github.com/metalama/Metalama",
-  "repository": "https://github.com/postsharp/PostSharp.Engineering.AISkills",
+  "repository": "https://github.com/postsharp-ops/PostSharp.Engineering.AISkills",
   "license": "MIT",
   "keywords": ["metalama", "aspects", "testing", "roslyn", "csharp"]
 }

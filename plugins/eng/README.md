@@ -7,7 +7,7 @@ PostSharp/Metalama engineering workflows: git conventions, PRs, releases, TeamCi
 - Git repository with GitHub remote
 - GitHub authentication (via MCP authorization server when running in Docker)
 - TeamCity access (for CI/CD commands)
-- PowerShell (for cache updates on Windows hosts)
+- PowerShell 7 (`pwsh`) for the `Build.ps1` build system
 
 ## Commands
 
@@ -16,17 +16,20 @@ PostSharp/Metalama engineering workflows: git conventions, PRs, releases, TeamCi
 | `/eng:create-pr [issue numbers]` | Create a pull request with proper metadata, milestone, and issue linking | `/eng:create-pr 123 456` |
 | `/eng:prepare-release <milestone>` | Prepare a GitHub release for a milestone with proper release notes | `/eng:prepare-release 2024.1` |
 | `/eng:tc-build [BuildType]` | Trigger a TeamCity build for the current branch | `/eng:tc-build` |
-| `/eng:tc-check-build <buildId>` | Check the status of a TeamCity build | `/eng:tc-check-build 12345` |
+| `/eng:tc-check-build <buildId> [continuous]` | Check the status of a TeamCity build, or monitor it until it finishes | `/eng:tc-check-build 12345 continuous` |
 | `/eng:fix-binlog-warnings` | Fix compiler warnings found in MSBuild binlog files | `/eng:fix-binlog-warnings` |
 | `/eng:reflect` | Review session and capture learnings for future sessions | `/eng:reflect` |
-| `/eng:update-cache` | Update the local Claude plugin cache from source | `/eng:update-cache` |
 
 ## Skills
 
 The `eng` skill provides:
 - Git workflow conventions (branching, commits, merge targets)
-- GitHub API patterns (milestones, project status, issue linking)
+- Critical build and coding rules, and documentation conventions
 - TeamCity integration
+
+Loaded on demand from `skills/eng/references/`:
+- `build-system.md` — `Build.ps1` concepts, commands, local dependencies, build pitfalls, Docker MCP approval server
+- `github-workflow.md` — issue workflow, milestones, project/status IDs, node-ID queries, breaking changes
 
 ## Installation
 
@@ -38,7 +41,7 @@ Add to your project's `.claude/settings.json`:
     "postsharp-engineering": {
       "source": {
         "source": "github",
-        "repo": "postsharp/PostSharp.Engineering.AISkills"
+        "repo": "postsharp-ops/PostSharp.Engineering.AISkills"
       }
     }
   },
@@ -48,7 +51,7 @@ Add to your project's `.claude/settings.json`:
 
 Or install interactively:
 ```bash
-/plugin marketplace add postsharp/PostSharp.Engineering.AISkills
+/plugin marketplace add postsharp-ops/PostSharp.Engineering.AISkills
 /plugin install eng@postsharp-engineering
 ```
 
@@ -80,10 +83,7 @@ Most git operations work automatically, but `git push` requires authentication:
 TeamCity commands require proper authentication. Ensure your TeamCity credentials are configured in your environment.
 
 ### Cache Updates
-If plugin updates aren't reflected, run:
-```bash
-/eng:update-cache
-```
+If plugin updates aren't reflected, make sure the plugin version was bumped (see the repository `CLAUDE.md`), then update the installed plugin with `/plugin`.
 
 ### Docker Container Context
 To check if Claude is running in Docker, check the `RUNNING_IN_DOCKER` environment variable.

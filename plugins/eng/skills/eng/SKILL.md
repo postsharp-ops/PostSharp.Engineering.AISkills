@@ -1,260 +1,120 @@
 ---
-description: PostSharp/Metalama engineering workflows. Use for git operations (commit, branch, PR, merge, release), TeamCity CI/CD, build diagnostics, and development utilities.
+name: eng
+description: This skill should be used when working in a PostSharp or Metalama repository and the user asks to "commit", "create a branch", "open a PR", "merge", "prepare a release", "run Build.ps1", "trigger a TeamCity build", "check the build", "monitor the build", "watch the build", "tell me when the build is done", "fix binlog warnings", "start work on issue NNNN", "write XML documentation", or mentions topic/develop/release branches, milestones, breaking changes, `<see>` tags, cross-repo or local dependencies, or the MCP approval server in Docker. Covers git conventions, the GitHub issue workflow, TeamCity CI/CD (triggering, checking and monitoring builds to completion), the PostSharp.Engineering build system, and documentation conventions.
 ---
 
 # PostSharp Engineering Workflows
 
-Git workflow conventions and commands for PostSharp/Metalama repositories.
+Conventions and commands for PostSharp/Metalama repositories: git, GitHub, TeamCity, and the `Build.ps1` build system.
 
-## Updating This Skill
+## Commands
 
-To make permanent changes, edit the source files under `X:\src\PostSharp.Engineering.AISkills\plugins\`, then run `/eng:update-cache` to update the local cache.
+Invoke these commands, or read their instructions on demand:
 
-## Repository Info
+- `/eng:create-pr` — create (prepare) a pull request
+- `/eng:fix-binlog-warnings` — analyze warnings from binlog output of `Build.ps1 build`
+- `/eng:prepare-release` — prepare a GitHub release, release notes; typically run after deployment
+- `/eng:reflect` — capture learnings (mistakes, patterns, knowledge gaps, user corrections) into `CLAUDE.md` or the plugin files. Run it automatically after solving a problem that took several failed attempts
+- `/eng:tc-build` — schedule a TeamCity (TC, CI) build. **Pushing a branch does not trigger a build.** CI runs only when a build is explicitly scheduled, so after pushing, trigger one with this command when CI results are wanted — and never wait on, or report, a build that was never scheduled
+- `/eng:tc-check-build` — check the status of a TC build, or monitor one until it finishes (use it for any "watch the build", "poll until done", "notify me when it completes" request; it polls in a `Monitor`, since a build outlasts a foreground command)
 
-- **Organization**: `metalama` (GitHub) / `postsharp` (legacy)
-- **Default branch**: Usually `release/YYYY.N` (e.g., `release/2025.1`)
-- **Development branches**: `develop/YYYY.N` (e.g., `develop/2026.0`)
-- **Development project ID**: `PVT_kwDOC7gkgc4A030b`
-- **Status field ID**: `PVTSSF_lADOC7gkgc4A030bzgqb1vQ`
-- **Status options**: Backlog (`f75ad846`), Planned (`08afe404`), In progress (`47fc9ee4`), In review (`4cc61d42`), Merged (`9d4ab054`), Done (`98236657`)
+## Related Repositories
 
-## Commands to use
+Three GitHub organizations are in use at once — none of them is a rename of another:
 
-Use the following commands or read their instructions on demand:
+- **`metalama`** — the current product repositories
+- **`postsharp`** — the older products; still active, and with its own Development project whose IDs differ from `metalama`'s
+- **`postsharp-ops`** — engineering and infrastructure, created June 2026; several repos were moved here from `postsharp`, so old `postsharp/…` URLs still redirect
 
-- `/eng:create-pr`: create (prepare) a pull request
-- `/eng:fix-binlog-warnings`: analyze warnings from binlog output of `Build.ps1 build`
-- `/eng:prepare-release`: on demand, when user asks to prepare release, github release, release notes. typically done after deployment
-- `/eng:reflect`: self-improvement after a difficult task. you should do it automatically after a problem has been solved and you did mistakes before
-- `/eng:tc-build`: schedule a teamcity (TC, CI) build
-- `/eng:tc-check-build`: check the status of the last TC build
-- `/eng:update-cache`: update the local plugin cache from source
+By convention every repo is checked out at **`c:\src\<RepoName>`** on developer machines, so a sibling repo can be read straight from disk instead of fetched — in particular:
 
-## Branch Strategy
+- **[PostSharp.Engineering](https://github.com/postsharp-ops/PostSharp.Engineering)** (`c:\src\PostSharp.Engineering`) — the in-house multi-repo continuous build and integration framework that `Build.ps1` and `eng/src` are built on. Read it to explain or change build behaviour.
+- **[Docs.Infrastructure](https://github.com/postsharp-ops/Docs.Infrastructure)** (`c:\src\Docs.Infrastructure`) — the authoritative documentation of build and IT infrastructure: TeamCity Cloud and build agents, package feeds, the code-signing service, Azure, networking, and the credential inventory (names and expiry only — the repo holds no secret values, by policy). Consult it before re-deriving infrastructure facts from `az`, TeamCity or Cloudflare; start at its `README.md`.
+- **[PostSharp.Engineering.AISkills](https://github.com/postsharp-ops/PostSharp.Engineering.AISkills)** — the source of this plugin.
+
+## Branches
 
 Each major version has two long-lived branches:
-- `release/YYYY.N` - Updated only during deployment (GitHub default branch per version line)
-- `develop/YYYY.N` - Continuous CI/CD development branch
 
-**Workflow:**
-1. `topic/YYYY.N/XXX-description` → `develop/YYYY.N` (PR)
-2. `develop/YYYY.N` → `release/YYYY.N` (after successful deployment)
+- **`release/YYYY.N`** — updated only during deployment; the GitHub default branch for that version line
+- **`develop/YYYY.N`** — the continuous CI/CD development branch
+
+Flow: `topic/YYYY.N/XXXX-description` → `develop/YYYY.N` (PR) → `release/YYYY.N` (after successful deployment).
 
 ## Branch Naming
 
 Pattern: `topic/YYYY.N/XXXX-short-description`
 
-- `YYYY.N` - Version/milestone (e.g., 2026.0)
-- `XXXX` - Issue number (required). If no issue, use date: `YY-MM-DD`
-- `short-description` - Brief, hyphenated description
-- If branch exists, add numeric suffix: `-2`
+- `YYYY.N` — version/milestone (e.g. `2026.0`)
+- `XXXX` — issue number (required). With no issue, use the date instead: `YY-MM-DD`
+- `short-description` — brief and hyphenated
+- If the branch already exists, append a numeric suffix: `-2`
 
-## Merge Target
+**Merge target for `topic/YYYY.N/*` is ALWAYS `develop/YYYY.N`. Never target the release branch directly.**
 
-For `topic/YYYY.N/*`, merge target is ALWAYS `develop/YYYY.N`. **Never use the release branch directly.**
+## Commits
 
-## Commit Messages
+**Never commit autonomously.** Unless the user explicitly asks for a commit:
 
-1. Keep short (50-72 chars)
-2. Include issue number: `(#XXXX)`
-3. **Never sign commits** (no "Generated with Claude Code")
-4. Use imperative mood: "Fix bug" not "Fixed bug"
+1. Ask the user to review the changes (they review in their IDE)
+2. Wait for explicit approval
+3. Only then commit
+
+Message rules:
+
+1. Keep the subject short (50–72 chars)
+2. Include the issue number: `(#XXXX)`
+3. Use imperative mood — "Fix bug", not "Fixed bug"
+4. **Never sign commits** — no "Generated with Claude Code" trailer. Sign only PRs, issues and comments, modestly, with "— Claude for \<user\>"
 
 Examples:
+
 - `Fix cache invalidation on timeout (#1234)`
 - `Add retry logic for API calls (#5678)`
 
-## Committing Changes
+## Building
 
-**IMPORTANT RULE**: Unless the user explicitly asks you to commit, you MUST:
-1. Ask the user to review the changes (they will review in their IDE)
-2. Wait for explicit approval before committing
-3. **Never commit autonomously** without user approval
+A product is made of several solutions. Inside a solution, projects reference each other directly, so `dotnet build` / `dotnet test` picks up a change immediately — that is the tool for ordinary work. Across solutions, consumption goes through NuGet packages instead, and only `Build.ps1 build` produces those packages.
 
-This ensures the user maintains control over what gets committed to the repository.
+So use `Build.ps1 build` for exactly two things:
 
-## Milestone Format
+- **Final validation** of the whole product, typically before opening a PR
+- **Producing the packages** a cross-solution or cross-repo change needs before the consuming solution can see it
 
-Always use `YYYY.N.B-suffix` format (e.g., `2026.0.8-rc`), never `YYYY.N` alone.
+**The decisive question is whether the change crosses a solution boundary — not how large it is.** Any rebuild that stays inside one solution belongs in `dotnet build` / `dotnet test`, whether that means one test or the entire solution.
 
-Suffix conventions:
-- `-preview` - Early preview releases
-- `-rc` - Release candidates
-- (no suffix) - Stable releases
+To answer that question rather than guess it, read the build layers: the solutions are an **ordered** list, declared in `eng/src/Program.cs` and printed by `Build.ps1 list-solutions`. Each solution consumes the ones before it through packages, so a change that a *later* layer has to see requires new package versions — and only `Build.ps1 build` produces those.
 
-Never assign anything to a closed milestone.
-Never reopen a closed milestone.
-Propose the user to create a new milestone with incremented version number.
+**Critical build rules:**
 
-## Build System (Build.ps1)
+- **NEVER** run `Build.ps1 build` — ask the user to run it (the tool timeout cuts it off and triggers retries)
+- **NEVER** run `Build.ps1 prepare` — it deletes all built artifacts and forces a subsequent `Build.ps1 build`
+- **NEVER** clear the global NuGet package cache — it is never needed
+- **Nothing else may touch the working tree while `Build.ps1 build` runs** — it deletes every `bin` and `obj` at the start, so a concurrent `dotnet build` or `dotnet test` fails on files removed underneath it
+- **Never** use `Build.ps1 build` for an intra-solution rebuild — it earns its place only when the change crosses a solution boundary, or as final validation
 
-PostSharp.Engineering is the build orchestration SDK. Each repo is a **product** made of multiple **solutions**.
+## Coding Rules
 
-### Key Concepts
-
-- **Product**: A repo, configured in `eng/src/Program.cs`
-- **Solution**: First-level directories (e.g., `Metalama.Framework`, `Metalama.Patterns`)
-- **Build.ps1**: PowerShell front-end to `eng/src`, self-generated via `Build.ps1 generate-scripts`
-
-### Reference Types
-
-| Scope | Reference Type | Notes |
-|-------|---------------|-------|
-| Within solution | `ProjectReference` | Standard .NET references |
-| Between solutions | `PackageReference` | Requires `Build.ps1 build` to update packages |
-| Cross-repo | `PackageReference` | Uses TeamCity artifacts by default |
-
-### Common Commands
-
-```powershell
-# Full build - creates unique package versions, slow (~10-30 min)
-Build.ps1 build
-
-# Kill locked processes after failed build
-Build.ps1 tools kill
-
-# List cross-repo dependencies
-Build.ps1 dependencies list
-
-# Use local repo instead of TeamCity artifacts
-Build.ps1 dependencies set local <product>
-
-# Revert to TeamCity artifacts
-Build.ps1 dependencies reset --all
-```
-
-### When to Use Build.ps1
-
-- **Cross-solution changes**: When modifying code in one solution that's consumed by another
-- **After pulling updates**: To ensure all inter-solution packages are current
-- **Before creating PR**: To verify full build succeeds
-
-**IMPORTANT**: `Build.ps1 build` is slow. Always ask the user before running it. For single-solution changes, prefer `dotnet build` / `dotnet test`.
-
-### Building Quick Reference
-
-| Scenario | Command |
-|----------|---------|
-| Single solution changes | `dotnet build` / `dotnet test` |
-| Cross-solution changes | Ask user to run `Build.ps1 build` |
-| Kill locked processes | `Build.ps1 tools kill` |
-
-### Build Notes
-
-- When adding package references, also add `PackageVersion` to `Directory.Packages.props`
-- Two `Build.ps1 build` runs cannot run in parallel
-- Don't build full solution just to run a single test - ask user first
-- After `Build.ps1 build`, MSBuild binlogs are under `artifacts/logs`
-
-### Local Dependencies
-
-By default, cross-repo `PackageReference` dependencies resolve from TeamCity (last successful build). To use local changes:
-
-```powershell
-# In consuming repo, point to local dependency
-Build.ps1 dependencies set local Metalama.Premium
-
-# Now PackageReference resolves from local repo's Build.ps1 build output
-# Requires Build.ps1 build in the dependency repo first
-```
-
-## API Notes
-
-### Getting Node IDs
-
-```bash
-# PR node ID
-gh api graphql -f query='{ repository(owner: "metalama", name: "Metalama") { pullRequest(number: 1228) { id } } }' --jq '.data.repository.pullRequest.id'
-
-# Issue node ID
-gh api graphql -f query='{ repository(owner: "metalama", name: "Metalama") { issue(number: 1226) { id } } }' --jq '.data.repository.issue.id'
-```
-
-## Breaking Changes
-
-- **Breaking changes**: Add comment to issue describing the change, add `breaking` label
-- **Not breaking**: Adding members to interfaces marked with `[InternalImplement]` (including inherited) is NOT a breaking change
-
-## Working on GitHub Issues
-
-When starting work on a GitHub issue:
-
-1. **Read issue details**: Fetch full issue content from GitHub
-2. **Check documentation**: Look for related conceptual docs
-3. **Create branch**: `topic/YYYY.N/XXXX-short-description`
-4. **Assign issue**: Assign the issue to the user in GitHub
-5. **Set milestone**: Assign to the latest open milestone for the current YYYY.N version (e.g., `YYYY.N.B-maturity`)
-6. **Set issue status**: Mark as "In Progress" in the Development project
-7. **Track progress**: Create `<issue-number>-TODO.md` file (don't commit it)
-8. **Discover bugs**: Create issues promptly when finding bugs during development
-
-## Critical Rules
-
-- **NEVER** run `Build.ps1 build` yourself - ask the user to run it (timeout too low, causes retries)
-- **NEVER** run `Build.ps1 prepare` - it deletes all built artifacts and requires a subsequent `Build.ps1 build`
-- **NEVER** clear global NuGet packages - it's never needed
-- **Never sign commits** with "Generated with Claude Code" - only sign PRs, issues, and comments modestly with "— Claude for <user>"
-- **Prefer `pwsh`** (PowerShell 7), never use old `cmd`
-- **No hardcoded delays in tests** - use barriers, TaskCompletionSource, sync points
-- **Never await without cancellation token**
-- **Don't fix cosmetic warnings** (redundant usings, etc.) until finalizing stage
-- **Focus on green tests first** before addressing warnings
+- **Prefer `pwsh`** (PowerShell 7); never use old `cmd`
+- **No hardcoded delays in tests** — use barriers, `TaskCompletionSource`, or sync points
+- **Never await without a cancellation token**
+- Add a `PackageVersion` entry to `Directory.Packages.props` whenever adding a package reference
+- Focus on green tests first; leave cosmetic warnings (redundant usings, etc.) until the finalizing stage
 
 ## Writing Documentation
 
 - Use `<see>` tags for type/member references
-- Maintain consistent lexicon within class families (same suffix)
+- Maintain a consistent lexicon within a class family (same suffix)
 - Keep code examples short
 - Cross-reference conceptual docs via `<seealso href="@..."/>` tags
-- Use api-docs-reviewer subagent when writing XML doc or API doc
-- **NEVER** replace `<see>` tags with `<c>` to fix XML doc errors - fix the reference or add `using` instead
-- 
-## AI Continuous Improvement
+- Use the api-docs-reviewer subagent when writing XML doc or API doc
+- **NEVER** replace `<see>` tags with `<c>` to fix XML doc errors — fix the reference or add a `using` instead
 
-Use the `/eng:reflect` command after difficult tasks where you made many unsuccessful attempts. This captures learnings for future sessions:
+## Updating This Skill
 
-- Mistakes made and how they were resolved
-- Patterns that worked well
-- Knowledge gaps that caused inefficiency
-- User corrections or feedback
+To make permanent changes, edit the source files under `plugins/` in the [PostSharp.Engineering.AISkills](https://github.com/postsharp-ops/PostSharp.Engineering.AISkills) repository (usually at `c:\src\PostSharp.Engineering.AISkills`), and bump the plugin version as required by that repository's `CLAUDE.md`. Claude Code manages the plugin cache; update the installed copy with `/plugin`.
 
-Learnings are added to `CLAUDE.md` or to the current plug-in files for future Claude instances to benefit from.
+## Reference Files
 
-
-## MCP Approval Server (Docker Support)
-
-When running Claude Code inside Docker containers (environment variable `RUNNING_IN_DOCKER` set ), certain operations require host-level access (git push, GitHub CLI, etc.). The MCP Approval Server provides a secure, human-in-the-loop workflow for these operations.
-
-### Architecture
-
-```
-┌─────────────────────────────────────────┐
-│ Docker Container                        │
-│  ┌─────────────┐                        │
-│  │ Claude Code │──▶ MCP Client         │
-│  └─────────────┘    (execute_command)   │
-└──────────────────────┬──────────────────┘
-                       │ HTTP/SSE
-                       ▼
-┌─────────────────────────────────────────┐
-│ Host: MCP Approval Server               │
-│  1. Receive request                     │
-│  2. AI risk analysis (Claude CLI)       │
-│  3. Auto-approve/reject or prompt user  │
-│  4. Execute if approved                 │
-│  5. Return result                       │
-└─────────────────────────────────────────┘
-```
-
-The MCP server starts automatically with `DockerBuild.ps1 -Claude`. To disable:
-
-```powershell
-.\DockerBuild.ps1 -Claude -NoMcp
-```
-
-Inside the container, privileged commands are routed through the MCP server automatically via the `host-approval` MCP configuration.
-
-### Supported Operations
-
-Any powershell command is allowed.
+- **`references/build-system.md`** — solution layout, reference types, the full `Build.ps1` command set, local cross-repo dependencies, build pitfalls and exit codes, and the Docker MCP approval server
+- **`references/github-workflow.md`** — starting work on an issue, milestone format, the per-org Development project and status field IDs (with the query to resolve them), GraphQL node-ID queries, breaking-change policy

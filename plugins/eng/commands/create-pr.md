@@ -33,9 +33,11 @@ $ARGUMENTS - Optional issue numbers to close (e.g., `1234 1235`)
    - List new interface members or behavioral changes
 
    ## Issues Fixed
-   - #1226 - Brief description
-   - #1232 - Brief description
+   Fixes #1226 - Brief description
+   Fixes #1232 - Brief description
    ```
+
+   **Each issue MUST get a closing keyword** (`Fixes`/`Closes`/`Resolves` + `#NNNN`). A bare `- #1226` reference does not link the issue, and step 6 cannot link it later — GitHub only parses closing keywords from the body.
 
    **NO test plan section** - tests are verified through CI.
 
@@ -55,6 +57,11 @@ $ARGUMENTS - Optional issue numbers to close (e.g., `1234 1235`)
    ```
 
 6. **Link issues** (workaround for non-default base branch):
+
+   GitHub only parses closing keywords when the PR base is the repo's **default** branch (`release/YYYY.N`). PRs target `develop/YYYY.N`, so the keywords are ignored on creation. Toggling the base through the default branch makes GitHub parse the body; the links then persist when you toggle back.
+
+   **This toggle only links issues that already have a closing keyword in the body (step 3).** With a bare `#NNNN` reference it is a silent no-op — it succeeds and links nothing.
+
    ```bash
    # Get PR node ID
    PR_ID=$(gh api graphql -f query='{ repository(owner: "metalama", name: "Metalama") { pullRequest(number: <PR_NUMBER>) { id } } }' --jq '.data.repository.pullRequest.id')
@@ -63,6 +70,13 @@ $ARGUMENTS - Optional issue numbers to close (e.g., `1234 1235`)
    gh api graphql -f query="mutation { updatePullRequest(input: { pullRequestId: \"$PR_ID\" baseRefName: \"release/YYYY.N\" }) { pullRequest { id } } }"
    gh api graphql -f query="mutation { updatePullRequest(input: { pullRequestId: \"$PR_ID\" baseRefName: \"develop/YYYY.N\" }) { pullRequest { id } } }"
    ```
+
+   **Verify - do not assume the toggle worked:**
+   ```bash
+   gh api graphql -f query='{ repository(owner: "metalama", name: "Metalama") { pullRequest(number: <PR_NUMBER>) { baseRefName closingIssuesReferences(first: 10) { nodes { number } } } } }' \
+     --jq '.data.repository.pullRequest | "base=\(.baseRefName) linked=\(.closingIssuesReferences.nodes | map(.number) | join(","))"'
+   ```
+   Expect `base=develop/YYYY.N` and every issue listed. If `linked=` is empty, the body is missing a closing keyword: fix the body with `gh pr edit`, then re-run the toggle.
 
 7. **Set project status to "In Review"**:
    ```bash
@@ -79,4 +93,5 @@ $ARGUMENTS - Optional issue numbers to close (e.g., `1234 1235`)
 
 - **No open milestone**: Propose creating one with format `YYYY.N.B-rc`
 - **PR not in Development project**: Skip project status update, note in output
-- **Issue linking fails**: Note that issues will need manual linking after merge
+- **`INSUFFICIENT_SCOPES` on step 7**: The `gh` token needs the `read:project` scope to read or set project fields. Skip the status update and tell the user to add the scope — the rest of the workflow is unaffected.
+- **Issue linking fails**: Re-check that the body uses a closing keyword, not a bare `#NNNN`. If it still fails, note that issues will need manual linking after merge.

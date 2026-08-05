@@ -7,7 +7,11 @@
       "Bash(git -C \"X:\\src\\PostSharp.Engineering.AISkills\" diff)",
       "Bash(git -C \"X:\\src\\PostSharp.Engineering.AISkills\" log --oneline -5)",
       "Bash(mkdir:*)",
-      "Bash(mv:*)"
+      "Bash(mv:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)",
+      "Bash(git cherry-pick:*)"
     ]
   }
 }

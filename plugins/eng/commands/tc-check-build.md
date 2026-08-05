@@ -105,8 +105,32 @@ URL: <webUrl>
 If `state == "running"`:
 - Display "Build is still running"
 - Show elapsed time since `startDate`
-- Optionally poll every 30 seconds with `--wait` flag
 - Use `finishDate == null` to detect running state
+
+### 6b. Monitoring a Build Until It Completes
+
+When asked to *monitor* a build rather than check it once, poll `/app/rest/builds/id:<id>` in a `Monitor`, not in a backgrounded shell command: a full build takes far longer than the ten-minute ceiling of a foreground command, whereas a `Monitor` runs up to an hour.
+
+Four rules, each of which has gone wrong in practice:
+
+- **Key the change detection on `state`, and on `status` only once the build is finished. Never on `statusText`.** While a build runs, `statusText` holds the name of the step currently executing, so a watch keyed on it emits an event for every step of the build. That floods the conversation and gets the watch stopped automatically for excessive output.
+- **Report every terminal state, not only success, and report API errors.** A watch that matches only the success marker stays silent when the build fails, and silence is indistinguishable from a build that is still running.
+- **Tolerate transient request failures.** One failed HTTP call must not kill the watch. Count consecutive failures and give up only after several, reporting that you did.
+- **Poll every 60 seconds** and stop the loop as soon as `state` is `finished`.
+
+```bash
+prev=""; fails=0
+while true; do
+  out=$(pwsh -NoProfile -Command '$ErrorActionPreference="Stop"; try { $r = Invoke-RestMethod -Uri "https://postsharp.teamcity.com/app/rest/builds/id:<ID>" -Headers @{ Authorization = "Bearer $env:TEAMCITY_CLOUD_TOKEN"; Accept = "application/json" }; if ($r.state -eq "finished") { "finished|$($r.status)|$($r.statusText)" } else { "$($r.state)|$($r.status)" } } catch { "APIERROR|$($_.Exception.Message)" }' 2>/dev/null)
+  if [ -z "$out" ]; then fails=$((fails+1)); if [ "$fails" -ge 5 ]; then echo "MONITOR: giving up after 5 empty responses"; break; fi; sleep 60; continue; fi
+  fails=0
+  if [ "$out" != "$prev" ]; then echo "build <ID>: $out"; prev="$out"; fi
+  case "$out" in finished*) break;; esac
+  sleep 60
+done
+```
+
+When the build finishes with a failure, follow up with the problem and failed-test queries in the sections below rather than reporting only the status line.
 
 ### 7. Get Problem Details (Optional)
 

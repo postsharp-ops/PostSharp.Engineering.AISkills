@@ -1,13 +1,13 @@
 {
   "name": "eng",
-  "version": "1.6.0",
+  "version": "1.7.0",
   "description": "PostSharp engineering workflows: git conventions, PRs, releases, TeamCity CI/CD, build diagnostics, development utilities",
   "author": {
     "name": "PostSharp Technologies",
     "email": "hello@postsharp.net"
   },
-  "homepage": "https://github.com/postsharp/PostSharp.Engineering.AISkills",
-  "repository": "https://github.com/postsharp/PostSharp.Engineering.AISkills",
+  "homepage": "https://github.com/postsharp-ops/PostSharp.Engineering.AISkills",
+  "repository": "https://github.com/postsharp-ops/PostSharp.Engineering.AISkills",
   "license": "MIT",
   "keywords": ["git", "workflow", "pr", "release", "teamcity", "ci-cd", "build", "diagnostics", "dotnet"]
 }

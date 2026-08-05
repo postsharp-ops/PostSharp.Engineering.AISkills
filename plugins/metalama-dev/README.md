@@ -91,7 +91,7 @@ Add to your project's `.claude/settings.json`:
     "postsharp-engineering": {
       "source": {
         "source": "github",
-        "repo": "postsharp/PostSharp.Engineering.AISkills"
+        "repo": "postsharp-ops/PostSharp.Engineering.AISkills"
       }
     }
   },
@@ -101,7 +101,7 @@ Add to your project's `.claude/settings.json`:
 
 Or install interactively:
 ```bash
-/plugin marketplace add postsharp/PostSharp.Engineering.AISkills
+/plugin marketplace add postsharp-ops/PostSharp.Engineering.AISkills
 /plugin install metalama-dev@postsharp-engineering
 ```
 
