@@ -1,8 +1,6 @@
 {
   "permissions": {
     "allow": [
-      "Bash(pwsh X:srcPostSharp.Engineering.AISkillsupdate-cache.ps1)",
-      "Bash(pwsh -File \"X:\\src\\PostSharp.Engineering.AISkills\\update-cache.ps1\")",
       "Bash(git -C \"X:\\src\\PostSharp.Engineering.AISkills\" status)",
       "Bash(git -C \"X:\\src\\PostSharp.Engineering.AISkills\" diff)",
       "Bash(git -C \"X:\\src\\PostSharp.Engineering.AISkills\" log --oneline -5)",
