@@ -1,6 +1,6 @@
 ---
 name: eng
-description: This skill should be used when working in a PostSharp or Metalama repository and the user asks to "commit", "create a branch", "open a PR", "merge", "prepare a release", "run Build.ps1", "trigger a TeamCity build", "check the build", "monitor the build", "watch the build", "tell me when the build is done", "fix binlog warnings", "start work on issue NNNN", "write XML documentation", or mentions topic/develop/release branches, milestones, breaking changes, `<see>` tags, cross-repo or local dependencies, or the MCP approval server in Docker. Covers git conventions, the GitHub issue workflow, TeamCity CI/CD (triggering, checking and monitoring builds to completion), the PostSharp.Engineering build system, and documentation conventions.
+description: This skill should be used when working in a PostSharp or Metalama repository and the user asks to "commit", "create a branch", "open a PR", "merge", "prepare a release", "run Build.ps1", "trigger a TeamCity build", "check the build", "monitor the build", "watch the build", "tell me when the build is done", "fix binlog warnings", "start work on issue NNNN", "write XML documentation", "write a comment", "write an issue", "write release notes", or mentions topic/develop/release branches, milestones, breaking changes, `<see>` tags, cross-repo or local dependencies, or the MCP approval server in Docker. Covers git conventions, the GitHub issue workflow, TeamCity CI/CD (triggering, checking and monitoring builds to completion), the PostSharp.Engineering build system, documentation conventions, and the copywriting rules for all prose (XML documentation, code comments, Markdown documents, commit messages, pull request descriptions, GitHub issues and comments).
 ---
 
 # PostSharp Engineering Workflows
@@ -100,6 +100,17 @@ To answer that question rather than guess it, read the build layers: the solutio
 - **Never await without a cancellation token**
 - Add a `PackageVersion` entry to `Directory.Packages.props` whenever adding a package reference
 - Focus on green tests first; leave cosmetic warnings (redundant usings, etc.) until the finalizing stage
+
+## Copywriting Rules
+
+These rules apply to every piece of prose, including XML documentation, code comments, Markdown documents, commit messages, pull request descriptions, and GitHub issues and comments.
+
+- **Be accurate.** The statement must be true of the code as written. A summary that says the class stores nothing, on a class that declares a field, is a defect, not a style problem.
+- **Use accurate software engineering language. Do not use analogies or slang.** Name the mechanism: "resolves the identifier through the symbol table", not "asks the symbol table for the identifier"; "costs an allocation and a dictionary lookup", not "buys nothing".
+- **Do not lead with a mystery or with a rhetorical construct.** State the subject in the first clause. Write "A durable reference stores an identifier at design time and the original reference during a batch compilation", not "What a durable reference stores depends on the scope". Avoid openings such as "The one thing this must never do", "Two consequences are worth knowing", and "This is a cache and nothing else".
+- **No uncommon acronyms or abbreviations.** Expand anything that is not already standard in this codebase.
+- **Assume the reader is not a native English speaker.** Prefer short sentences and a plain vocabulary. Avoid inversion, ellipsis, and idiom. One idea per sentence.
+- **Do not use bold text for emphasis inside a paragraph**, and do not use italics to stress a word. Structure the text instead. Agent instruction files such as `CLAUDE.md` and skills are exempt: there, bold marks critical rules.
 
 ## Writing Documentation
 
