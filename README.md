@@ -54,7 +54,6 @@ PostSharp/Metalama engineering workflows:
 | `/eng:tc-build` | Trigger TeamCity build |
 | `/eng:tc-check-build` | Check TeamCity build status |
 | `/eng:fix-binlog-warnings` | Fix compiler warnings from MSBuild binlog files |
-| `/eng:reflect` | Review session and capture learnings |
 
 ### Skills
 

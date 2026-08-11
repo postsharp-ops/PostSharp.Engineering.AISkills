@@ -18,7 +18,6 @@ PostSharp/Metalama engineering workflows: git conventions, PRs, releases, TeamCi
 | `/eng:tc-build [BuildType]` | Trigger a TeamCity build for the current branch | `/eng:tc-build` |
 | `/eng:tc-check-build <buildId> [continuous]` | Check the status of a TeamCity build, or monitor it until it finishes | `/eng:tc-check-build 12345 continuous` |
 | `/eng:fix-binlog-warnings` | Fix compiler warnings found in MSBuild binlog files | `/eng:fix-binlog-warnings` |
-| `/eng:reflect` | Review session and capture learnings for future sessions | `/eng:reflect` |
 
 ## Skills
 

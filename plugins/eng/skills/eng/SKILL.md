@@ -14,7 +14,6 @@ Invoke these commands, or read their instructions on demand:
 - `/eng:create-pr` — create (prepare) a pull request
 - `/eng:fix-binlog-warnings` — analyze warnings from binlog output of `Build.ps1 build`
 - `/eng:prepare-release` — prepare a GitHub release, release notes; typically run after deployment
-- `/eng:reflect` — capture learnings (mistakes, patterns, knowledge gaps, user corrections) into `CLAUDE.md` or the plugin files. Run it automatically after solving a problem that took several failed attempts
 - `/eng:tc-build` — schedule a TeamCity (TC, CI) build. **Pushing a branch does not trigger a build.** CI runs only when a build is explicitly scheduled, so after pushing, trigger one with this command when CI results are wanted — and never wait on, or report, a build that was never scheduled
 - `/eng:tc-check-build` — check the status of a TC build, or monitor one until it finishes (use it for any "watch the build", "poll until done", "notify me when it completes" request; it polls in a `Monitor`, since a build outlasts a foreground command)
 
