@@ -24,6 +24,9 @@ The build infrastructure it runs against — TeamCity Cloud, the build agents, t
 # Full build - produces the uniquely versioned packages that other solutions and repos consume
 Build.ps1 build
 
+# Generate the files a build needs, on a repo fresh from git - implied by 'build'
+Build.ps1 prepare
+
 # Kill locked processes after a failed build
 Build.ps1 tools kill
 
@@ -57,12 +60,14 @@ The Id from `list-solutions` is what `Build.ps1 build --solution <id>` takes; no
 | Scenario | Command |
 |----------|---------|
 | Changes within one solution | `dotnet build` / `dotnet test` |
-| Cross-solution change, so consumers can pick it up | Ask the user to run `Build.ps1 build` |
-| After pulling updates, to refresh inter-solution packages | Ask the user to run `Build.ps1 build` |
-| Final validation before a PR | Ask the user to run `Build.ps1 build` |
+| Cross-solution change, so consumers can pick it up | `Build.ps1 build` |
+| After pulling updates, to refresh inter-solution packages | `Build.ps1 build` |
+| Final validation before a PR | `Build.ps1 build` |
 | Locked processes after a failure | `Build.ps1 tools kill` |
 
-`Build.ps1 build` must always be run by the user, never by Claude.
+`Build.ps1 build` is a clean rebuild of the whole product, and it increments the package version, which is what rules out any package cache issue. In a large repo it takes several minutes, so it is worth that cost only when the change has to reach a consumer through a `PackageReference` — another solution in the same repo, or another repo — or as final validation. Within a solution the references are `ProjectReference`, and `dotnet build` rebuilds incrementally in seconds.
+
+Run it in the background: it outlasts the foreground command timeout, and a cut-off command invites pointless retries.
 
 ## Build Pitfalls
 

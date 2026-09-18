@@ -73,12 +73,12 @@ Examples:
 
 ## Building
 
-A product is made of several solutions. Inside a solution, projects reference each other directly, so `dotnet build` / `dotnet test` picks up a change immediately — that is the tool for ordinary work. Across solutions, consumption goes through NuGet packages instead, and only `Build.ps1 build` produces those packages.
+A product is made of several solutions. Inside a solution, projects reference each other through `ProjectReference`, so `dotnet build` / `dotnet test` sees a change immediately and rebuilds incrementally — that is the tool for ordinary work. Across solutions, and across repos, consumption goes through `PackageReference` instead, and only `Build.ps1 build` produces those packages.
 
-So use `Build.ps1 build` for exactly two things:
+`Build.ps1 build` does a clean rebuild of the whole product and increments the package version, which is what rules out any package cache issue. In a large repo that takes several minutes, so run it only when it is needed:
 
+- **Producing the packages** a change needs before its consumer can see it, when that consumer is another solution in the same repo, or another repo
 - **Final validation** of the whole product, typically before opening a PR
-- **Producing the packages** a cross-solution or cross-repo change needs before the consuming solution can see it
 
 **The decisive question is whether the change crosses a solution boundary — not how large it is.** Any rebuild that stays inside one solution belongs in `dotnet build` / `dotnet test`, whether that means one test or the entire solution.
 
@@ -86,11 +86,11 @@ To answer that question rather than guess it, read the build layers: the solutio
 
 **Critical build rules:**
 
-- **NEVER** run `Build.ps1 build` — ask the user to run it (the tool timeout cuts it off and triggers retries)
-- **NEVER** run `Build.ps1 prepare` — it deletes all built artifacts and forces a subsequent `Build.ps1 build`
-- **NEVER** clear the global NuGet package cache — it is never needed
+- **Run `Build.ps1 build` in the background** — a large repo takes longer than the foreground command timeout, and a cut-off command invites pointless retries
+- **Run `Build.ps1 prepare` only on a repo fresh from git** — it generates the files a build needs, which are not in source control, but it starts by deleting every build artifact. On a repo that has already been built it therefore forces a full `Build.ps1 build`, and `Build.ps1 build` implies `prepare` anyway
+- **NEVER** clear the global NuGet package cache — each build gets a new package version, so a stale cache entry is never the cause
 - **Nothing else may touch the working tree while `Build.ps1 build` runs** — it deletes every `bin` and `obj` at the start, so a concurrent `dotnet build` or `dotnet test` fails on files removed underneath it
-- **Never** use `Build.ps1 build` for an intra-solution rebuild — it earns its place only when the change crosses a solution boundary, or as final validation
+- **Never** use `Build.ps1 build` for an intra-solution rebuild — it is a clean rebuild of everything, so it costs minutes where the incremental `dotnet build` costs seconds
 
 ## Coding Rules
 
