@@ -22,7 +22,7 @@ Four products are versioned and released independently, each with its own releas
 
 PostSharp and Metalama.Vsx are built from private repos (`postsharp/PostSharp`, `metalama/Metalama.Vsx`); the `.Public` repo is where their issues, milestones and releases live. Work in the public repo for both.
 
-The default target of this command is the **Metalama** release, described in Phases 1–3, plus the Metalama.Compiler release when the compiler version changed. For the other two, follow those phases with the deltas in "PostSharp Release" and "Metalama.Vsx Release" below.
+The default target of this command is the **Metalama** release, described in Phases 1–3, plus the Metalama.Compiler release when the compiler version changed, plus the SharpCrafters.Backstage releases when the Backstage version changed. For the other two, follow those phases with the deltas in "PostSharp Release" and "Metalama.Vsx Release" below.
 
 Metalama is not one repository. It is several repositories sharing one version, released together, covered by one set of release notes in `metalama/Metalama`. Inspect the issues and milestones of all three:
 
@@ -33,6 +33,21 @@ Metalama is not one repository. It is several repositories sharing one version, 
 | `metalama/Metalama.Community` | public | Own milestone per version (e.g. `2026.1.22`), with issues |
 
 Metalama.Compiler is a separate product, not a Metalama repo: it gets its own release and notes, which the Metalama notes reference when the version changed.
+
+### SharpCrafters.Backstage
+
+`postsharp-ops/SharpCrafters.Backstage` is a shared dependency of both PostSharp and Metalama. It is not a product. Both products consume it through the `BackstageVersion` property of `eng/AutoUpdatedVersions.props`, the same file that carries `MetalamaCompilerVersion`.
+
+It is handled in two ways at once, and both are required:
+
+1. **Its own release.** Tag `release/<VERSION>`, title `SharpCrafters.Backstage <VERSION>`, notes built from its milestone issues. This keeps its own history complete, exactly as Metalama does for Metalama.Compiler.
+2. **Inlined into the product notes.** Its changes also appear in the PostSharp and Metalama notes, merged into the normal Breaking/New/Enhancements/Fixes categories, linked to its own issues: `[SharpCrafters.Backstage#12](https://github.com/postsharp-ops/SharpCrafters.Backstage/issues/12)`. This is the same treatment as Metalama.Community issues.
+
+**Inlining is the difference from Metalama.Compiler**, whose changes the product notes only point to by a link. Backstage is not a product, so a reader must never have to open its repo to learn what changed. Do not replace the inlined items with a link to the Backstage release.
+
+One product release often spans **several** Backstage versions. Every version in the span is inlined, and every version in the span gets its own release.
+
+The property is absent on version lines that predate the dependency — PostSharp `2024.0` and `2026.0`, Metalama `2026.1` and earlier. Its absence means there is nothing to do, not that a step was missed.
 
 ## Arguments
 
@@ -97,7 +112,33 @@ Gather all information first:
        gh api repos/metalama/Metalama.Compiler/milestones --jq '.[] | select(.title == "<CURRENT_COMPILER>") | {number, title, state, open_issues, closed_issues}'
        ```
 
-7. **Check Metalama.Premium changes**:
+7. **Check SharpCrafters.Backstage changes**. Read `BackstageVersion` from `eng/AutoUpdatedVersions.props` at the current and previous release tags of the product being released:
+   ```bash
+   gh api repos/<PRODUCT_REPO>/contents/eng/AutoUpdatedVersions.props?ref=<CURRENT_TAG> --jq '.content' | base64 -d
+   gh api repos/<PRODUCT_REPO>/contents/eng/AutoUpdatedVersions.props?ref=<PREV_TAG> --jq '.content' | base64 -d
+   ```
+   If the property is absent from both, skip the rest of this step and report it as such in Phase 2. If the two versions are equal, there is nothing to inline.
+
+   If they differ, **enumerate every Backstage version in the span**, not only the current one. A single product release often covers several Backstage builds, and each one needs its own release and contributes its own issues:
+   ```bash
+   gh release list --repo postsharp-ops/SharpCrafters.Backstage --limit 30
+   gh api repos/postsharp-ops/SharpCrafters.Backstage/tags --jq '.[].name'
+   ```
+   The span is exclusive of `<PREV_BACKSTAGE>` and inclusive of `<CURRENT_BACKSTAGE>`.
+
+   For each version in the span, take its milestone and its issues:
+   ```bash
+   gh api repos/postsharp-ops/SharpCrafters.Backstage/milestones?state=all --jq '.[] | select(.title == "<BACKSTAGE_VERSION>") | {number, title, state, open_issues, closed_issues}'
+   gh issue list --repo postsharp-ops/SharpCrafters.Backstage --milestone "<BACKSTAGE_VERSION>" --state all --json number,title,state,labels
+   ```
+   **Backstage notes are built from milestone issues**, as Metalama's are — not from the commit log, as Metalama.Compiler's are. A version in the span that has no milestone is a gap, not an empty release: report it in Phase 2 and ask what to do. Never fall back to the commit log, and never pass over it in silence.
+
+   Also record, for each version in the span, whether a release already exists:
+   ```bash
+   gh release view --repo postsharp-ops/SharpCrafters.Backstage release/<BACKSTAGE_VERSION>
+   ```
+
+8. **Check Metalama.Premium changes**:
    - Fetch commit log between matching Metalama.Premium release tags:
      ```bash
      gh api repos/metalama/Metalama.Premium/compare/release/<PREV_VERSION>...release/<VERSION> --jq '.commits[] | {sha: .sha[:8], message: .commit.message}'
@@ -110,7 +151,7 @@ Gather all information first:
    - Expect no issues: Premium work is normally tracked in `metalama/Metalama`. An empty milestone is not evidence that Premium is unchanged — use the commit log for that
    - Any Premium issues that do exist go in the Metalama release notes, linked to the Premium repo
 
-8. **Check Metalama.Community changes**. Community shares Metalama's version and has its own milestone per version:
+9. **Check Metalama.Community changes**. Community shares Metalama's version and has its own milestone per version:
    ```bash
    gh api repos/metalama/Metalama.Community/milestones --jq '.[] | {number, title, state, open_issues, closed_issues}'
    gh issue list --repo metalama/Metalama.Community --milestone "<VERSION>" --state all --json number,title,state,labels
@@ -118,7 +159,7 @@ Gather all information first:
    - The Community milestone may carry a different patch number; match on the version being released, and ask if ambiguous
    - Its issues go in the Metalama release notes under the normal categories, linked to the Community repo: `[Metalama.Community#98](https://github.com/metalama/Metalama.Community/issues/98)`
 
-9. **Review what each issue actually shipped**. A title is written when the defect is reported, so it describes the symptom or the first suspected cause; the real defect is often known only once the work is done. Use the closing PR, not the title, as the source for the note.
+10. **Review what each issue actually shipped**. A title is written when the defect is reported, so it describes the symptom or the first suspected cause; the real defect is often known only once the work is done. Use the closing PR, not the title, as the source for the note.
 
    For every issue that will appear in the notes — from any of the three repos — fetch the issue body and its closing PR. **`--repo` must be the issue's own repo**, since the same number exists in all of them:
    ```bash
@@ -144,15 +185,19 @@ Present to user for approval:
    - If changed and release already exists: note that it will be referenced in Metalama notes
    - If unchanged: note that compiler reference will not be included
 
-6. **Premium and Community status**: report all three repos, including those with nothing to report, so an empty result is distinguishable from an unchecked repo
+6. **Backstage status**: the `BackstageVersion` before and after, then a table of every version in the span with its milestone, its issue count, and whether a release already exists
+   - Say explicitly when the property is absent, so "this line has no Backstage dependency" is distinguishable from "not checked"
+   - **List any version in the span that has no milestone, and ask what to do.** Its issues cannot be recovered from the commit log, so the notes would silently lose them
+
+7. **Premium and Community status**: report all three repos, including those with nothing to report, so an empty result is distinguishable from an unchecked repo
    - Premium: meaningful commits, and any issues
    - Community: milestone and its issues
 
-7. **Excluded issues**: issues in the milestones that will not appear in the notes, with the reason (see "Exclusions")
+8. **Excluded issues**: issues in the milestones that will not appear in the notes, with the reason (see "Exclusions")
 
-8. **Proposed issue renames**: a table of issue number, current title, proposed title, and reason (stale after implementation, or unintelligible to a user). The title is what a reader sees on following the link, so it has to match the note. **Wait for approval on each rename.**
+9. **Proposed issue renames**: a table of issue number, current title, proposed title, and reason (stale after implementation, or unintelligible to a user). The title is what a reader sees on following the link, so it has to match the note. **Wait for approval on each rename.**
 
-9. **Proposed release notes**:
+10. **Proposed release notes**:
 
    Single base:
    ```
@@ -190,7 +235,12 @@ Present to user for approval:
 
    Metalama.Premium issues are included in the normal categories above with links to the Premium repo: `[#XX](https://github.com/metalama/Metalama.Premium/issues/XX)`. Premium commits that reference Metalama issues should use Metalama issue links instead.
 
-10. **Proposed Metalama.Compiler release notes** (when creating):
+   SharpCrafters.Backstage issues are included the same way, across **every** Backstage version in the span, linked as `[SharpCrafters.Backstage#XX](https://github.com/postsharp-ops/SharpCrafters.Backstage/issues/XX)`. Do not group them by Backstage version, and do not give them a section of their own: the reader sees one list of changes per category. Add the Backstage milestones to `### Resources`, one line per version, so the provenance stays traceable without a hop:
+   ```
+   - [SharpCrafters.Backstage <BACKSTAGE_VERSION>](https://github.com/postsharp-ops/SharpCrafters.Backstage/milestone/<N>?closed=1)
+   ```
+
+11. **Proposed Metalama.Compiler release notes** (when creating):
    ```
    **Release date:** YYYY-MM-DD
 
@@ -201,6 +251,29 @@ Present to user for approval:
    ### Resources
    - [Milestone](https://github.com/metalama/Metalama.Compiler/milestone/<COMPILER_MILESTONE_NUMBER>?closed=1)
    ```
+
+12. **Proposed SharpCrafters.Backstage release notes**, one block per version in the span that has no release yet:
+   ```
+   **Release date:** YYYY-MM-DD
+
+   Based on [<PREV_BACKSTAGE>](https://github.com/postsharp-ops/SharpCrafters.Backstage/releases/tag/release/<PREV_BACKSTAGE>).
+
+   ### Breaking Changes
+   - [#XX](https://github.com/postsharp-ops/SharpCrafters.Backstage/issues/XX) Description
+
+   ### New
+   - [#XX](https://github.com/postsharp-ops/SharpCrafters.Backstage/issues/XX) Description
+
+   ### Enhancements
+   - [#XX](https://github.com/postsharp-ops/SharpCrafters.Backstage/issues/XX) Description
+
+   ### Fixes
+   - [#XX](https://github.com/postsharp-ops/SharpCrafters.Backstage/issues/XX) Description
+
+   ### Resources
+   - [Milestone](https://github.com/postsharp-ops/SharpCrafters.Backstage/milestone/<N>?closed=1)
+   ```
+   The wording of each item is written once and used in both places: the Backstage release and the inlined product notes. Only the link form differs — bare `#XX` in the Backstage release, qualified `SharpCrafters.Backstage#XX` in the product notes.
 
 **STOP and wait for user approval.**
 
@@ -220,43 +293,55 @@ After approval:
    ```
    Add `--prerelease` if version contains `-preview` or `-rc`.
 
-3. **Create Metalama release** (with updated notes including compiler reference and Premium issues/commits):
+3. **Create SharpCrafters.Backstage releases**, one per version in the span that has no release yet, oldest first, each covering only its own changes:
+   ```bash
+   gh release create release/<BACKSTAGE_VERSION> --repo postsharp-ops/SharpCrafters.Backstage --title "SharpCrafters.Backstage <BACKSTAGE_VERSION>" --notes "<NOTES>" [--prerelease]
+   ```
+   Add `--prerelease` if the version contains `-preview` or `-rc`. Create these before the product release, so the milestone links in the inlined items resolve.
+
+4. **Create Metalama release** (with updated notes including compiler reference, Premium issues/commits, and the inlined Backstage items):
    ```bash
    gh release create release/<VERSION> --target <COMMIT> --title "Metalama <VERSION>" --notes "<NOTES>"
    ```
 
-4. **Close Metalama milestone**:
+5. **Close Metalama milestone**:
    ```bash
    gh api repos/metalama/Metalama/milestones/<NUMBER> -X PATCH -f state=closed
    ```
 
-5. **Close Metalama.Compiler milestone** (if one exists for this compiler version):
+6. **Close Metalama.Compiler milestone** (if one exists for this compiler version):
    ```bash
    gh api repos/metalama/Metalama.Compiler/milestones/<COMPILER_MILESTONE_NUMBER> -X PATCH -f state=closed
    ```
 
-6. **Close Metalama.Premium milestone** (if one exists for this version):
+7. **Close the SharpCrafters.Backstage milestones**, one per version in the span:
+   ```bash
+   gh api repos/postsharp-ops/SharpCrafters.Backstage/milestones/<N> -X PATCH -f state=closed
+   ```
+
+8. **Close Metalama.Premium milestone** (if one exists for this version):
    ```bash
    gh api repos/metalama/Metalama.Premium/milestones/<NUMBER> -X PATCH -f state=closed
    ```
 
-7. **Close Metalama.Community milestone** (if one exists for this version):
+9. **Close Metalama.Community milestone** (if one exists for this version):
    ```bash
    gh api repos/metalama/Metalama.Community/milestones/<NUMBER> -X PATCH -f state=closed
    ```
 
-8. **Update project status to "Done"** for each issue:
+10. **Update project status to "Done"** for each issue:
    ```bash
    # Done option: 98236657
    gh api graphql -f query='mutation { updateProjectV2ItemFieldValue(input: { projectId: "PVT_kwDOC7gkgc4A030b" itemId: "<ITEM_ID>" fieldId: "PVTSSF_lADOC7gkgc4A030bzgqb1vQ" value: { singleSelectOptionId: "98236657" } }) { projectV2Item { id } } }'
    ```
 
-9. **Add release comment** to each issue:
+11. **Add release comment** to each issue, including the Backstage ones:
    ```bash
    gh issue comment <NUMBER> --repo <ISSUE_REPO> --body "Released in [<VERSION>](https://github.com/metalama/Metalama/releases/tag/release/<VERSION>).
 
    — Claude"
    ```
+   A Backstage issue is cited in the product release the reader consumes, so point its comment at the product release, not at the Backstage one.
 
 ## PostSharp Release
 
@@ -280,6 +365,7 @@ Deltas from the Metalama workflow:
   ### Resources
   - [Milestone <UPSTREAM>](https://github.com/postsharp/PostSharp.Public/milestone/<N>?closed=1) (upstream)
   ```
+- **SharpCrafters.Backstage applies here as it does to Metalama**: read `BackstageVersion` from `eng/AutoUpdatedVersions.props` in `postsharp/PostSharp` (the private repo, where the file lives), create the Backstage releases, and inline the Backstage items into these notes. The property is absent on the `2024.0` and `2026.0` lines, so on those there is nothing to do.
 - Categories, item wording, and the `### Resources` milestone link are as for Metalama.
 
 ## Metalama.Vsx Release
@@ -379,3 +465,6 @@ List the exclusions in Phase 2, so the omission is visible.
 - **Metalama.Premium issues**: Include in Metalama release notes under normal categories. Use Metalama.Premium issue links for Premium-only issues; use Metalama issue links when commits reference Metalama issues (the usual case, since Metalama is Premium's issue tracker)
 - **Metalama.Premium commits**: Meaningful commits (not eng updates, version bumps, or merges) that don't reference any issue should be mentioned as bullet points in the Metalama release notes
 - **Metalama.Community issues**: Include under the normal categories, linked to the Community repo — `[Metalama.Community#98](https://github.com/metalama/Metalama.Community/issues/98)`
+- **SharpCrafters.Backstage issues**: Inline under the normal categories of the PostSharp and Metalama notes, linked to the Backstage repo — `[SharpCrafters.Backstage#12](https://github.com/postsharp-ops/SharpCrafters.Backstage/issues/12)`. Cover every Backstage version in the span, and do not group the items by version
+- **SharpCrafters.Backstage releases**: One per version in the span that has no release yet, built from that version's milestone issues. Never from the commit log — a version with no milestone is reported in Phase 2 and resolved with the user
+- **Backstage is inlined, the compiler is linked**: do not apply the compiler's "This release updates … to <version>" sentence to Backstage, and do not apply Backstage's inlining to the compiler
