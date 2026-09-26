@@ -145,6 +145,9 @@ Rules:
 - **Copy nothing into the image.** The Dockerfile is `FROM <base image>` and nothing else. The repository is
   mounted, so the test builds the real project at its real path and relative paths mean what they say. The
   context stays the directory holding the Dockerfile, which keeps the content hash small and stable.
+- **To run in the build image, name `eng/docker/build.Dockerfile` and pass no `-Context`.** Do not write a
+  Dockerfile of your own that repeats the build's tool chain. See
+  [Build contexts](#build-contexts-and-the-build-image).
 - **Send build output outside the project directory.** Tests share projects, and the SDK globs `**/*.cs` under
   a project while excluding only the intermediate directory of the build in progress. Output left inside the
   project makes a sibling test's generated `AssemblyInfo.cs` part of this build, failing with `CS0579`. Give
@@ -187,14 +190,58 @@ Reimplementing any of that in a test script would produce a slower and less corr
 builds one image per test is precisely the workload where a missed cache hit is expensive.
 
 `-Test` is a distinct mode of the same script. It requires `-Dockerfile` and `-Command`, takes an optional
-`-Context` that defaults to the directory containing the Dockerfile, and refuses to combine with `-Claude`,
-`-Interactive`, `-BuildImage`, `-StartVsmon`, `-PostInit`, `-KeepInit` and `-Script`. Compared with a normal
-build run it does not:
+`-Context` (see the next section), and refuses to combine with `-Claude`, `-Interactive`, `-BuildImage`,
+`-StartVsmon`, `-PostInit`, `-KeepInit` and `-Script`. Compared with a normal build run it:
 
-- build the product image chain from the repository's Dockerfiles, or the boot image over it
-- invoke `Init.g.ps1`
+- resolves the product image chain only for the test's Dockerfile and its ancestors, not for the build or
+  Claude leaf
+- does not invoke `Init.g.ps1`
 
-What it does **not** change is the mounts. The repository, the NuGet cache, the source dependencies and the
+### Build contexts and the build image
+
+`DockerBuild.ps1` follows one convention for build contexts. **Every Dockerfile of the image chain,
+`eng/docker/<stem>.Dockerfile`, has the build context `eng/docker-context/<stem>/`.** The rule holds for the
+build and Claude leaves, for every ancestor reached through `ARG BASE_IMAGE`, and for a chain Dockerfile named
+by `-Test`. `Build.ps1` populates the directory; a missing directory is an empty context; the `.g/`
+subdirectory is excluded from the hash. The authoritative statement is the `BUILD CONTEXT CONVENTION` comment
+at the top of `DockerBuild.ps1`, and the Build contexts section of `doc/dockerbuild.md`.
+
+The convention matters because the tag folds the files of the context. The same Dockerfile built with another
+context gets another tag, is found neither locally nor in the registry, and is built again -- for the build
+image, that means rebuilding Visual Studio and everything below it.
+
+A test Dockerfile is therefore one of two kinds:
+
+| Dockerfile | Use it when | Default context | `-Context` |
+|------------|-------------|-----------------|------------|
+| The test's own, next to its `RunTest.ps1` | The tool chain is the subject: a specific SDK, operating system or base image | The directory that holds the Dockerfile | Allowed |
+| A chain Dockerfile, typically `eng/docker/build.Dockerfile` | The test needs the tool chain of the build, such as Visual Studio and the .NET SDK | `eng/docker-context/<stem>/` | **Never pass it** |
+
+With a chain Dockerfile and no `-Context`, the tag is the one the chain computes, and the image the build
+already produced is reused. An explicit `-Context` is honoured, but it changes the tag and forces a local
+build. `-Context` applies to the test's Dockerfile only; an ancestor always takes its chain context.
+
+```powershell
+# A test that runs in the build image of the repository. No -Context: the chain's context gives the chain's tag.
+$repositoryRoot = ( Resolve-Path ( Join-Path $PSScriptRoot '../../..' ) ).Path
+
+$arguments = @{
+    Test       = $true
+    OS         = $os
+    Dockerfile = Join-Path $repositoryRoot 'eng/docker/build.Dockerfile'
+    Command    = 'pwsh -NoProfile -File Tests/Docker/MyTest/Scenario.ps1'
+}
+
+& "$repositoryRoot/DockerBuild.ps1" @arguments
+exit $LASTEXITCODE
+```
+
+The first test of this kind is `PipeServerShutdown` in PostSharp (`Tests/Core/DockerTests/PipeServerShutdown`),
+which needs Visual Studio for a .NET Framework build.
+
+### Mounts and environment
+
+What `-Test` does **not** change is the mounts. The repository, the NuGet cache, the source dependencies and the
 sibling repositories are mounted as they are for any build, and the command runs with the repository as its
 working directory. A test consuming a source dependency needs the same repositories the build needs, and the
 repository is a volume mount rather than a build context: the Docker context is only what is needed to build
@@ -343,7 +390,7 @@ discovery, platform filtering and reporting; it must never add anything the test
 - The build agents, their operating systems, architectures and container engines:
   `build/build-agents.md` in Docs.Infrastructure.
 - The base-image mirror: `services/docker-registry.md` in Docs.Infrastructure.
-- `DockerBuild.ps1` itself, including the image chain, the content-hash tags and the mount model:
+- `DockerBuild.ps1` itself, including the image chain, the content-hash tags, the build contexts and the mount model:
   `doc/dockerbuild.md` in PostSharp.Engineering.
 - The mechanism behind this page, including the launcher template and the build configuration type:
   `doc/docker-tests.md` in PostSharp.Engineering.
