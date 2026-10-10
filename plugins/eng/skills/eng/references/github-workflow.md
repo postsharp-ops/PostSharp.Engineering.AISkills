@@ -11,6 +11,46 @@
 7. **Track progress** in an `<issue-number>-TODO.md` file (do not commit it)
 8. **File bugs promptly** — create issues as soon as bugs are discovered during development
 
+## Issue Types
+
+Classify every issue with its GitHub **issue type**, never with a label. The `bug` and `enhancement` labels were deleted from all `postsharp` and `metalama` repositories on 2026-10-10; do not recreate them.
+
+Set the type when creating or triaging an issue. The release notes are categorized by it, so an untyped issue in a milestone holds up the release.
+
+### Which type to use
+
+| Type | Orgs | Use when | Examples | Release notes |
+|---|---|---|---|---|
+| `Bug` | both | The product does not behave as documented, as designed, or as it did before | Crash, wrong output, wrong or missing diagnostic, regression (including a performance regression), incorrect documentation | Fixes |
+| `Enhancement` | both | An existing feature works as designed, and the change makes it better without adding a concept the user must learn | A new option on an existing aspect, a clearer error message, a performance improvement, support for a new .NET SDK or IDE version, a new documentation article | Enhancements |
+| `Feature` | both | Users gain a capability they did not have — a new API, aspect, pattern or integration they must learn to use | A new pattern library, a new aspect kind, a new public API surface | New |
+| `User Story` | both | One user goal that spans several issues or PRs. It is the parent; each child issue gets its own type | "Make advice parameter binding a public feature", with its sub-issues | New, summarized as one item |
+| `Task` | `metalama` | Internal work with no user-visible effect | Refactoring, build or CI changes, test infrastructure | Omitted |
+| `Request` | `metalama` | An incoming report that cannot be acted on yet: no reproduction, or unclear whether it is a defect | A customer report awaiting a repro | Never shipped as-is |
+
+Deciding between neighbors:
+
+- **`Bug` or `Enhancement`** — was the current behavior intended? If not, it is a `Bug`, even when the fix needs a new API or option. If it was intended and documented, it is an `Enhancement`, even if users report it as a bug.
+- **`Enhancement` or `Feature`** — does the user need to learn something new to benefit? A new concept or API surface is a `Feature`; making an existing one work better or in more places is an `Enhancement`. Size does not decide it.
+- **`Feature` or `User Story`** — a `User Story` exists to group other issues. A single issue implemented by a single PR is a `Feature`, however large.
+- **`Request`** is a triage state, not a final classification. Retype it as `Bug`, `Enhancement` or `Feature` once it is understood, or close it — before it is assigned to a milestone.
+- `postsharp` has no `Task` type. Purely internal work there is usually not tracked by an issue; if it is, leave it untyped, and `prepare-release` reports it in Phase 2 for exclusion.
+
+The `breaking` label stays a label, because it applies on top of any type. When an issue already has a type, keep it unless it is clearly wrong under the rules above.
+
+### Setting and reading the type
+
+`gh` (2.101 or later) handles issue types by name:
+
+```bash
+gh issue create --type Bug --title "..." --body "..."
+gh issue edit 1234 --type Enhancement
+gh issue list --type Bug --milestone 2026.0.8
+gh issue view 1234 --json issueType --jq .issueType.name
+```
+
+Type names are the same in both orgs, but their IDs differ. Use names rather than IDs.
+
 ## Milestones
 
 Always use the `YYYY.N.B-suffix` format (e.g. `2026.0.8-rc`), never `YYYY.N` alone.

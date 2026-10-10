@@ -19,6 +19,8 @@ $ARGUMENTS - Optional issue numbers to close (e.g., `1234 1235`)
    - If breaking: add `breaking` label to PR and linked issues
    - Add comment describing the breaking change
 
+   **Check the issue type** of every linked issue (`Bug`, `Enhancement`, `Feature` or `User Story`), and set it with `gh issue edit <n> --type <Type>` if missing — the release notes are categorized by it. See "Issue Types" in the eng skill's `references/github-workflow.md`.
+
 3. **Create PR** targeting `develop/YYYY.N` (NOT default branch):
    ```bash
    gh pr create --base develop/YYYY.N --title "<title>" --body "<body>"

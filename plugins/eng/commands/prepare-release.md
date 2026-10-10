@@ -457,7 +457,7 @@ List the exclusions in Phase 2, so the omission is visible.
 ## Release Notes Guidelines
 
 - **Do NOT mention PRs** if PR implements a listed issue
-- **Categorize by labels**: `breaking` → Breaking, `enhancement` → New/Enhancements, `bug` → Fixes
+- **Categorize by issue type**: the `breaking` label → Breaking, whatever the type; otherwise type `Feature` or `User Story` → New, `Enhancement` → Enhancements, `Bug` → Fixes, `Task` → omitted. A `Request` still in the milestone is not shippable: report it in Phase 2 for retyping. Read the types with `gh issue list --milestone <m> --state all --json number,title,issueType,labels`. List any issue without a type in Phase 2 and resolve its category with the user; the `bug` and `enhancement` labels no longer exist
 - **Use full issue links**: `[#1247](https://github.com/metalama/Metalama/issues/1247)`
 - **Sign comments**: `— Claude`
 - **Metalama.Compiler release notes**: Built from commit history, excluding `<<VERSION_BUMP>>`, `<<AUTO_UPDATED_VERSIONS>>`, merge commits, and `Update eng` commits
