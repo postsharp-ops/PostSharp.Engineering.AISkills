@@ -407,7 +407,7 @@ Start each item with a past-tense verb naming what changed for the user:
 | Fixes | **Fixed …** | Fixed a design-time crash when a project contains duplicate project references. |
 | Enhancements | **Improved …**, **Extended …** | Improved crash reports, which now capture the loader exceptions behind a type-load failure. |
 | New | **Added …** | Added a public `IDurableRef` interface family. |
-| Breaking Changes | **Removed …**, **Renamed …**, **Changed …** | Renamed the test synchronization hooks into the `Metalama.Testing.Hooks` package. |
+| Breaking Changes | **Removed …**, **Renamed …**, **Changed …** | Changed the default cache key of `[Cache]` methods, which invalidates existing cache entries. |
 
 Present tense is fine where it reads better — "Crash reports now capture …", "The compile-time compilation no longer force-defines `NETSTANDARD_2_0`". A bare symptom or cause is not: "`KeyNotFoundException` in `SplitResultsByTree`" tells a user nothing.
 

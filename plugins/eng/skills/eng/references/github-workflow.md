@@ -108,8 +108,32 @@ gh api graphql -f query='{ repository(owner: "metalama", name: "Metalama") { iss
 
 ## Breaking Changes
 
-The `breaking` label is for **user-facing** breaking changes only — a change that breaks code our users have written against our public API.
+The `breaking` label is for **user-facing** breaking changes only — a change whose effect a user can observe: code written against our public API stops compiling or behaves differently, or the observable behavior of the build or of the product changes (MSBuild properties and integration, configuration, diagnostics, generated code, run-time behavior).
 
 - **Do not label a break in an internal API.** Internal APIs are ours to change; those breaks are not tracked and the label is noise on them. This is the common mistake — when in doubt, ask whether a user outside the team could have depended on the thing that changed.
+
+### Which APIs are public
+
+The decision is made **per package**, not per type: a package's API is public if and only if its assembly is in the API reference of the product documentation — the `metadata` section of `docfx.json` in `postsharp/PostSharp.Documentation` or `metalama/Metalama.Documentation`. Every other package is internal, **even when it is published on nuget.org**. Within a public package, the public C# surface is public API; `[EditorBrowsable(Never)]`, `[InternalImplement]` interfaces (see below) and members of internal packages are not.
+
+When the lists below and `docfx.json` disagree, `docfx.json` wins — update this file.
+
+Public packages, as of 2026-10-10 (Metalama.Documentation `develop/2026.1`, PostSharp.Documentation `develop/2026.0`):
+
+| Repository | Public packages |
+|---|---|
+| `metalama/Metalama` | `Metalama.Framework` (assembly shipped in `Metalama.Framework.Redist`), `Metalama.Framework.Sdk`, `Metalama.Framework.Introspection`, `Metalama.Framework.Workspaces`, `Metalama.Testing.AspectTesting`, `Metalama.Testing.UnitTesting`, `Metalama.LinqPad`, `Metalama.Migration`, `Metalama.Extensions.DependencyInjection`, `Metalama.Extensions.DependencyInjection.ServiceLocator`, `Metalama.Extensions.Multicast`, `Metalama.Extensions.Metrics`, `Metalama.Patterns.Contracts`, `Metalama.Patterns.Memoization`, `Metalama.Patterns.Immutability`, `Metalama.Patterns.Observability`, `Metalama.Patterns.Wpf`, `Metalama.Patterns.Caching`, `Metalama.Patterns.Caching.Backend`, `Metalama.Patterns.Caching.Aspects`, `Flashtrace`, `Flashtrace.Formatters` |
+| `metalama/Metalama.Premium` | `Metalama.Extensions.Architecture`, `Metalama.Extensions.CodeFixes`, `Metalama.Extensions.Validation`, `Metalama.Patterns.Caching.Backends.Azure`, `Metalama.Patterns.Caching.Backends.Redis` |
+| `metalama/Metalama.Compiler` | `Metalama.Compiler.Sdk` (assembly `Metalama.Compiler.Interface`) |
+| `postsharp/PostSharp` | `PostSharp` (assembly shipped in `PostSharp.Redist`); `PostSharp.Patterns.Common`, `.Aggregation`, `.Model`, `.Threading`, `.Xaml`, `.Caching`, `.Diagnostics` (assemblies shipped in the matching `.Redist` packages); `PostSharp.Patterns.Caching.Azure`, `.Caching.IMemoryCache`, `.Caching.Redis`; `PostSharp.Patterns.Diagnostics.AspNetCore`, `.AspNetFramework`, `.DiagnosticSource`, `.HttpClient`, `.ApplicationInsights`, `.CommonLogging`, `.Log4Net`, `.Microsoft`, `.NLog`, `.Serilog`, `.Tracing`, `.Configuration` |
+
+Internal packages that are nevertheless published on nuget.org — a break in them is **not** labeled:
+
+- Metalama: `Metalama.Backstage*`, `Metalama.Testing.Hooks`, `Metalama.Framework.Implementation.*`, `Metalama.Tool`, `Metalama.Extensions.HtmlWriter`, `Metalama.Extensions.DiffEngine`, `Metalama.Patterns.TestHelpers`, `Metalama.Patterns.Caching.TestHelpers`, `Metalama.Licensing`.
+- PostSharp: `PostSharp.Compiler.Common`, `PostSharp.Compiler.Engine`, `PostSharp.Compiler.Platforms`, `PostSharp.Compiler.Settings`, and the weaver assemblies inside public packages (`PostSharp.Patterns.*.Weaver`).
+
+An internal package can still be the channel of an observable break — for example, a `Metalama.Tool` command-line change or a `PostSharp.Compiler.*` change that alters the woven code. Label it then, for the observable effect, not for the API change.
+
+### Rules
 - Adding members to interfaces marked `[InternalImplement]` (including inherited members) is **not** a breaking change.
 - For a genuine user-facing break: add a comment to the issue describing the change, and add the `breaking` label to the issue and the PR.

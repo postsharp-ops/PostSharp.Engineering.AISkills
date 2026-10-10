@@ -127,5 +127,5 @@ To make permanent changes, edit the source files under `plugins/` in the [PostSh
 ## Reference Files
 
 - **`references/build-system.md`** — solution layout, reference types, the full `Build.ps1` command set, local cross-repo dependencies, build pitfalls and exit codes, and the Docker MCP approval server
-- **`references/github-workflow.md`** — starting work on an issue, milestone format, the per-org Development project and status field IDs (with the query to resolve them), GraphQL node-ID queries, breaking-change policy, issue types and when to use each
+- **`references/github-workflow.md`** — starting work on an issue, milestone format, the per-org Development project and status field IDs (with the query to resolve them), GraphQL node-ID queries, breaking-change policy and the list of public packages, issue types and when to use each
 - **`references/docker-tests.md`** — tests that each need their own container: the `RunDockerTests.ps1` launcher, the `RunTest.ps1` contract, the `test.psd1` manifest and its platform identifiers, `DockerBuild.ps1 -Test` and its build contexts (the `eng/docker-context/<stem>` convention, running a test in the build image), the TeamCity service messages, and the base-image registry
