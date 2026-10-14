@@ -15,7 +15,7 @@ $ARGUMENTS - Optional issue numbers to close (e.g., `1234 1235`)
 
 1. **Commit and push** any remaining changes
 
-2. **Check for breaking changes** compared to `develop/YYYY.N`:
+2. **Check for breaking changes** compared to the last stable (non-preview) release, not to `develop/YYYY.N`: a change to behavior that only shipped in a preview is not breaking (see "Breaking Changes" in `skills/eng/references/github-workflow.md`):
    - If breaking: add `breaking` label to PR and linked issues
    - Add comment describing the breaking change
 
