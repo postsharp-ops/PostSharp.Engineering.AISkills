@@ -356,16 +356,25 @@ Deltas from the Metalama workflow:
   ```
   PostSharp <VERSION> is based on [v<PREV>](https://github.com/postsharp/PostSharp.Public/releases/tag/v<PREV>), plus the following changes.
   ```
-- Forward-port, with a paragraph naming what was carried over:
+- Forward-port: **say that it is a forward-port, and give only counts.** Name a new feature of the upstream release if it
+  has one, then the number of enhancements and of bug fixes. Do not describe the upstream changes: they are in the
+  upstream release, which the line links.
   ```
   PostSharp <VERSION> is based on [v<PREV>](…/v<PREV>) and [v<UPSTREAM>](…/v<UPSTREAM>).
 
-  This release forward-ports the upstream [v<UPSTREAM>](…/v<UPSTREAM>) fixes to the <LINE> line: <summary>.
+  This release forward-ports [v<UPSTREAM>](…/v<UPSTREAM>): 3 enhancements and 5 bug fixes.
 
   ### Resources
   - [Milestone <UPSTREAM>](https://github.com/postsharp/PostSharp.Public/milestone/<N>?closed=1) (upstream)
   ```
+  The same applies to a release of the newer line that also has changes of its own: one line for the forward-port, after
+  the "based on" line, and the sections for its own changes.
 - **SharpCrafters.Backstage applies here as it does to Metalama**: read `BackstageVersion` from `eng/AutoUpdatedVersions.props` in `postsharp/PostSharp` (the private repo, where the file lives), create the Backstage releases, and inline the Backstage items into these notes. The property is absent on the `2024.0` and `2026.0` lines, so on those there is nothing to do.
+  - **"SharpCrafters.Backstage" is an internal name: never use it as a category or in the text of an item.** Put each
+    Backstage item in the category of its area, such as Licensing, and describe what the user sees. A Backstage change
+    that users see needs an issue in `postsharp/PostSharp.Public`, in the milestone of the release, for the item to link:
+    the notes are written from the issues of that milestone, and an item that links a Backstage pull request names the
+    internal repository.
 - Categories, item wording, and the `### Resources` milestone link are as for Metalama.
 
 ## Metalama.Vsx Release
