@@ -134,6 +134,14 @@ Internal packages that are nevertheless published on nuget.org — a break in th
 
 An internal package can still be the channel of an observable break — for example, a `Metalama.Tool` command-line change or a `PostSharp.Compiler.*` change that alters the woven code. Label it then, for the observable effect, not for the API change.
 
+### Baseline: the last stable release
+
+A change is breaking only when it breaks what the **last stable (non-preview) release** does. The question is whether code that builds and runs with that release stops compiling or behaves differently, not whether the change differs from `develop/YYYY.N`.
+
+- A change to behavior that was introduced in a preview of the version under development, and never shipped in a stable release, is **not** labeled `breaking`, even when it makes code that builds with that preview fail. Previews carry no compatibility promise.
+- Check the baseline before labeling: find when the affected behavior first shipped (the milestone of the issue that introduced it, or the earliest nuget.org version that has it). If it first shipped in a preview of the current version, the change is not breaking.
+- Example: postsharp/PostSharp.Public#244 reports LA0135 for a master-only property on an implicitly grouped advice. Implicit grouping first shipped in 2027.0.2-preview, and 2026.0 rejected an advice without `Master` and without pointcut (LA0049), so no 2026.0 code is affected: not breaking.
+
 ### Rules
 - Adding members to interfaces marked `[InternalImplement]` (including inherited members) is **not** a breaking change.
 - For a genuine user-facing break: add a comment to the issue describing the change, and add the `breaking` label to the issue and the PR.
