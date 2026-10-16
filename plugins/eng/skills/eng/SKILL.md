@@ -90,6 +90,7 @@ To answer that question rather than guess it, read the build layers: the solutio
 - **Run `Build.ps1 prepare` only on a repo fresh from git** — it generates the files a build needs, which are not in source control, but it starts by deleting every build artifact. On a repo that has already been built it therefore forces a full `Build.ps1 build`, and `Build.ps1 build` implies `prepare` anyway
 - **NEVER** clear the global NuGet package cache — each build gets a new package version, so a stale cache entry is never the cause
 - **Nothing else may touch the working tree while `Build.ps1 build` runs** — it deletes every `bin` and `obj` at the start, so a concurrent `dotnet build` or `dotnet test` fails on files removed underneath it
+- **When you need the packages of some solutions but not of all, use `Build.ps1 build --to <solution>`** — for example, to run tests that consume only the packages of the first solutions. It builds the solutions in their order and stops after the given one (its Id, its `Alias` or its file name, as `list-solutions` shows them), with new package versions as in a full build. Do not use `--solution` for this: it skips the prepare, so the packages keep their version. See `references/build-system.md` ("Build Layers")
 - **Never** use `Build.ps1 build` for an intra-solution rebuild — it is a clean rebuild of everything, so it costs minutes where the incremental `dotnet build` costs seconds
 
 ## Coding Rules

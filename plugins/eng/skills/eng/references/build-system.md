@@ -53,7 +53,10 @@ Locating the changed solution in that list answers which command is needed:
 
 Editing `Metalama.Framework` and running its own tests stays in-layer, so `dotnet test` suffices. Making that same edit visible to `Metalama.Patterns` crosses a layer and requires `Build.ps1 build`.
 
-The Id from `list-solutions` is what `Build.ps1 build --solution <id>` takes; note that passing it implies `--no-dependencies`.
+Two options of `Build.ps1 build` (and of `Build.ps1 test`) select solutions. Each takes the Id from `list-solutions`, the `Alias` of the solution (an optional property in `eng/src/Program.cs`, also shown by `list-solutions`), or the file name of the solution with or without the extension. Both need PostSharp.Engineering 2023.2.492 or later.
+
+- `--to <solution>` builds the solutions in their order and **stops after the given one**. The build is prepared as a full build, so the packages get a new version. Use it when you need the packages of some solutions but not of all: the consumer of the change reads only the packages of the first layers, so building the later layers costs time for nothing. For example, a change to the PostSharp compiler tested with the aspect tests, which consume the Core packages only, needs `Build.ps1 build --to Core`, not the Patterns solution. A partial build does not verify the artifacts of the product, and a Public build refuses the option.
+- `--solution <solution>` builds **only** the given solution and implies `--no-dependencies`: there is no prepare, so the packages keep the version of the previous build, and a package cache can serve a stale package. Prefer `--to`.
 
 ## Choosing a Build Command
 
@@ -61,6 +64,7 @@ The Id from `list-solutions` is what `Build.ps1 build --solution <id>` takes; no
 |----------|---------|
 | Changes within one solution | `dotnet build` / `dotnet test` |
 | Cross-solution change, so consumers can pick it up | `Build.ps1 build` |
+| You need the packages of some solutions, but not of all | `Build.ps1 build --to <solution>` |
 | After pulling updates, to refresh inter-solution packages | `Build.ps1 build` |
 | Final validation before a PR | `Build.ps1 build` |
 | Locked processes after a failure | `Build.ps1 tools kill` |
